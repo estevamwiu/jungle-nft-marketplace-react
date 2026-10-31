@@ -12,6 +12,8 @@ import {
 
 import { useNFTs } from "@/features/nft/hooks/use.nfts"
 import { NFTCard } from "@/features/nft/components/NFTCard"
+import { PromotionalBanners } from "@/components/home/PromotionalBanners"
+import { MintingJournal } from "@/components/home/MintingJournal"
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -469,6 +471,8 @@ function HomePage() {
           </div>
         )}
       </section>
+      <PromotionalBanners />
+      <MintingJournal />
     </div>
   )
 }

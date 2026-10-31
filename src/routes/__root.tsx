@@ -17,6 +17,7 @@ import {
 
 import { useCart } from "@/features/cart/hooks/use.cart"
 import { useAuth } from "@/features/auth/hooks/use-auth"
+import { Footer } from "@/components/layout/Footer"
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -260,21 +261,7 @@ function RootLayout() {
       {/* =====================================
           FOOTER TEMPORÁRIO
       ===================================== */}
-      <footer className="mt-20 border-t border-[#493026] bg-kurio-surface py-8">
-        <div className="kurio-container flex flex-col items-center justify-between gap-3 text-xs text-kurio-muted sm:flex-row">
-          <span className="font-bold tracking-widest text-kurio-text">
-            KURIO
-          </span>
-
-          <span>
-            Marketplace de arte digital
-          </span>
-
-          <span>
-            © {new Date().getFullYear()} Kurio
-          </span>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }
