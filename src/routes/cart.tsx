@@ -1,8 +1,11 @@
 
+import { useState, type FormEvent } from "react"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react"
+
 import { useCart } from "@/features/cart/hooks/use.cart"
 import { useAuth } from "@/features/auth/hooks/use-auth"
-import { Button } from "@/components/ui/button"
+import { useNFTs } from "@/features/nft/hooks/use.nfts"
 
 export const Route = createFileRoute("/cart")({
   component: CartPage,
@@ -21,7 +24,20 @@ function CartPage() {
     totalPrice,
   } = useCart()
 
+  const { data: nfts = [] } = useNFTs()
+
+  const [promoCode, setPromoCode] = useState("")
+  const [promoMessage, setPromoMessage] = useState("")
+
+  const relatedNFTs = nfts
+    .filter((nft) => !items.some((item) => item.nft.id === nft.id))
+    .slice(0, 5)
+
   function handleCheckout() {
+    if (items.length === 0) {
+      return
+    }
+
     if (!isAuthenticated) {
       void navigate({ to: "/login" })
       return
@@ -30,148 +46,351 @@ function CartPage() {
     void navigate({ to: "/checkout" })
   }
 
-  return (
-    <section className="py-10">
-      <h1 className="mb-2 text-3xl font-bold">
-        Meu carrinho
-      </h1>
+  function handlePromoSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
 
-      <p className="mb-8 text-slate-400">
-        {totalItems} NFT(s) no carrinho
-      </p>
+    if (!promoCode.trim()) {
+      setPromoMessage("Informe um código promocional.")
+      return
+    }
+
+    setPromoMessage(
+      "Nenhuma promoção está disponível no momento."
+    )
+  }
+
+  return (
+    <section className="pb-16 pt-8 sm:pt-10">
+      <nav
+        aria-label="Navegação estrutural"
+        className="mb-7 flex flex-wrap items-center gap-2 text-xs font-bold"
+      >
+        <Link
+          to="/"
+          className="text-kurio-muted transition-colors hover:text-kurio-primary"
+        >
+          Início
+        </Link>
+
+        <span className="text-kurio-muted">/</span>
+
+        <Link
+          to="/"
+          hash="marketplace"
+          className="text-kurio-muted transition-colors hover:text-kurio-primary"
+        >
+          Mercado
+        </Link>
+
+        <span className="text-kurio-muted">/</span>
+
+        <span className="text-kurio-text">Carrinho</span>
+      </nav>
 
       {items.length === 0 ? (
-        <div className="rounded-xl border border-slate-800 p-10 text-center">
-          <h2 className="text-xl font-semibold">
-            Seu carrinho está vazio
-          </h2>
+        <div className="border border-[#493026] bg-kurio-surface px-6 py-20 text-center">
+          <ShoppingCart
+            size={44}
+            strokeWidth={1.5}
+            className="mx-auto text-kurio-primary"
+          />
 
-          <p className="mt-3 text-slate-400">
-            Explore o marketplace e adicione seus NFTs favoritos.
+          <h1 className="mt-6 text-2xl font-bold text-kurio-text">
+            Seu carrinho está vazio
+          </h1>
+
+          <p className="mx-auto mt-4 max-w-md text-sm leading-7 text-kurio-muted">
+            Explore o marketplace e adicione seus NFTs favoritos
+            à sua coleção.
           </p>
 
           <Link
             to="/"
-            className="mt-6 inline-block rounded-lg bg-violet-600 px-5 py-3 text-white hover:bg-violet-700"
+            hash="marketplace"
+            className="mt-8 inline-flex items-center justify-center bg-kurio-primary px-7 py-3 text-sm font-bold text-kurio-bg transition-colors hover:bg-[#e6a15f]"
           >
             Explorar NFTs
           </Link>
         </div>
       ) : (
-        <div className="grid gap-8 lg:grid-cols-3">
-          <div className="space-y-4 lg:col-span-2">
-            {items.map(({ nft, quantity }) => (
-              <article
-                key={nft.id}
-                className="flex flex-col gap-4 rounded-xl border border-slate-800 p-4 sm:flex-row"
-              >
-                <img
-                  src={nft.image}
-                  alt={nft.name}
-                  className="h-32 w-full rounded-lg object-cover sm:w-32"
-                />
+        <>
+          <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-14">
+            <div className="min-w-0">
+              <div className="mb-3 hidden grid-cols-[minmax(0,2.2fr)_0.9fr_0.9fr_1fr_30px] gap-4 border-b border-[#493026] pb-3 text-xs font-bold text-kurio-text md:grid">
+                <span>NFTs</span>
+                <span>Preço</span>
+                <span>Edições</span>
+                <span>Total</span>
+                <span />
+              </div>
 
-                <div className="flex flex-1 flex-col justify-between gap-4">
-                  <div>
-                    <Link
-                      to="/nft/$id"
-                      params={{ id: nft.id }}
-                      className="text-lg font-semibold hover:text-violet-400"
-                    >
-                      {nft.name}
-                    </Link>
-
-                    <p className="text-sm text-slate-400">
-                      Criado por {nft.creator}
-                    </p>
-
-                    <p className="mt-2 font-semibold text-violet-400">
-                      {nft.price.toFixed(2)} ETH
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={quantity <= 1}
-                        onClick={() =>
-                          updateQuantity(nft.id, quantity - 1)
-                        }
+              <div className="space-y-3">
+                {items.map(({ nft, quantity }) => (
+                  <article
+                    key={nft.id}
+                    className="grid gap-5 border border-[#493026] bg-kurio-surface p-4 md:grid-cols-[minmax(0,2.2fr)_0.9fr_0.9fr_1fr_30px] md:items-center md:gap-4"
+                  >
+                    <div className="flex min-w-0 items-center gap-4">
+                      <Link
+                        to="/nft/$id"
+                        params={{ id: nft.id }}
+                        className="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-[#35221a] md:h-16 md:w-16"
                       >
-                        −
-                      </Button>
+                        <img
+                          src={nft.image}
+                          alt={nft.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </Link>
 
-                      <span className="min-w-6 text-center">
-                        {quantity}
-                      </span>
+                      <div className="min-w-0">
+                        <Link
+                          to="/nft/$id"
+                          params={{ id: nft.id }}
+                          className="block text-sm font-bold text-kurio-text transition-colors hover:text-kurio-primary"
+                        >
+                          {nft.name}
+                        </Link>
 
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          updateQuantity(nft.id, quantity + 1)
-                        }
-                      >
-                        +
-                      </Button>
+                        <p className="mt-2 text-[11px] text-kurio-muted">
+                          ID do token: #{nft.id.padStart(4, "0")}
+                        </p>
+                      </div>
                     </div>
 
-                    <Button
+                    <div>
+                      <span className="mb-1 block text-[10px] text-kurio-muted md:hidden">
+                        Preço
+                      </span>
+
+                      <span className="text-sm font-bold text-kurio-primary">
+                        {nft.price.toFixed(2)} ETH
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="mb-2 block text-[10px] text-kurio-muted md:hidden">
+                        Edições
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateQuantity(nft.id, quantity - 1)
+                          }
+                          disabled={quantity <= 1}
+                          aria-label={`Diminuir quantidade de ${nft.name}`}
+                          className="flex h-7 w-7 items-center justify-center rounded-full bg-kurio-primary text-kurio-bg transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Minus size={14} />
+                        </button>
+
+                        <span className="min-w-5 text-center text-sm font-bold text-kurio-text">
+                          {quantity}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateQuantity(nft.id, quantity + 1)
+                          }
+                          aria-label={`Aumentar quantidade de ${nft.name}`}
+                          className="flex h-7 w-7 items-center justify-center rounded-full bg-kurio-primary text-kurio-bg transition-opacity hover:opacity-85"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="mb-1 block text-[10px] text-kurio-muted md:hidden">
+                        Total
+                      </span>
+
+                      <span className="text-sm font-bold text-kurio-primary">
+                        {(nft.price * quantity).toFixed(2)} ETH
+                      </span>
+                    </div>
+
+                    <button
                       type="button"
-                      variant="destructive"
-                      size="sm"
                       onClick={() => removeItem(nft.id)}
+                      aria-label={`Remover ${nft.name} do carrinho`}
+                      title="Remover NFT"
+                      className="justify-self-start text-kurio-muted transition-colors hover:text-red-400 md:justify-self-center"
                     >
-                      Remover
-                    </Button>
-                  </div>
+                      <Trash2 size={18} />
+                    </button>
+                  </article>
+                ))}
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-kurio-muted">
+                  {totalItems} edição(ões) no carrinho
+                </p>
+
+                <button
+                  type="button"
+                  onClick={clearCart}
+                  className="text-xs text-kurio-muted transition-colors hover:text-red-400"
+                >
+                  Limpar carrinho
+                </button>
+              </div>
+            </div>
+
+            <aside className="border-t border-[#493026] pt-3">
+              <h2 className="mb-6 border-b border-[#493026] pb-3 text-base font-bold text-kurio-text">
+                Resumo da carteira
+              </h2>
+
+              <div className="mb-7">
+                <h3 className="mb-3 text-xs font-bold text-kurio-text">
+                  Código promocional
+                </h3>
+
+                <form
+                  onSubmit={handlePromoSubmit}
+                  className="flex"
+                >
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={(event) => {
+                      setPromoCode(event.target.value)
+                      setPromoMessage("")
+                    }}
+                    placeholder="Digite o código promocional..."
+                    aria-label="Código promocional"
+                    className="min-w-0 flex-1 border border-[#704b35] bg-kurio-bg px-3 py-3 text-[11px] text-kurio-text outline-none placeholder:text-kurio-muted focus:border-kurio-primary"
+                  />
+
+                  <button
+                    type="submit"
+                    className="bg-kurio-primary px-4 py-3 text-xs font-bold text-kurio-bg transition-colors hover:bg-[#e6a15f]"
+                  >
+                    Aplicar
+                  </button>
+                </form>
+
+                {promoMessage && (
+                  <p
+                    role="status"
+                    className="mt-2 text-xs text-kurio-muted"
+                  >
+                    {promoMessage}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-4 text-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-kurio-text">
+                    Subtotal
+                  </span>
+
+                  <span className="text-kurio-text">
+                    {totalPrice.toFixed(2)} ETH
+                  </span>
                 </div>
-              </article>
-            ))}
+
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-kurio-text">
+                    Desconto do lançamento
+                  </span>
+
+                  <span className="text-kurio-muted">
+                    (-) 0.00 ETH
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-kurio-text">
+                    Taxa de rede
+                  </span>
+
+                  <span className="text-kurio-muted">
+                    A calcular
+                  </span>
+                </div>
+              </div>
+
+              <p className="mt-2 text-right text-[10px] text-kurio-primary">
+                Taxa não simulada neste checkout
+              </p>
+
+              <div className="mt-6 flex items-center justify-between gap-4 border-t border-[#493026] pt-5">
+                <span className="text-sm font-bold text-kurio-text">
+                  Total
+                </span>
+
+                <span className="text-lg font-black text-kurio-primary">
+                  {totalPrice.toFixed(2)} ETH
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCheckout}
+                className="mt-6 w-full rounded bg-kurio-primary px-5 py-4 text-sm font-bold text-kurio-bg transition-colors hover:bg-[#e6a15f]"
+              >
+                Conectar e finalizar
+              </button>
+
+              <Link
+                to="/"
+                hash="marketplace"
+                className="mt-4 block text-center text-xs font-bold text-kurio-primary transition-colors hover:text-[#e6a15f]"
+              >
+                Continuar explorando
+              </Link>
+            </aside>
           </div>
 
-          <aside className="h-fit rounded-xl border border-slate-800 bg-slate-900 p-6">
-            <h2 className="mb-6 text-xl font-semibold">
-              Resumo do pedido
+          <section className="mt-20 sm:mt-24">
+            <h2 className="mb-7 border-b border-[#493026] pb-3 text-base font-bold text-kurio-primary">
+              Colecionadores também viram
             </h2>
 
-            <div className="mb-4 flex justify-between text-slate-400">
-              <span>Quantidade</span>
-              <span>{totalItems}</span>
-            </div>
+            {relatedNFTs.length === 0 ? (
+              <p className="py-8 text-sm text-kurio-muted">
+                Não há outras recomendações disponíveis no momento.
+              </p>
+            ) : (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                {relatedNFTs.map((nft) => (
+                  <Link
+                    key={nft.id}
+                    to="/nft/$id"
+                    params={{ id: nft.id }}
+                    className="group block"
+                  >
+                    <div className="overflow-hidden border border-[#493026] bg-kurio-surface p-3">
+                      <div className="aspect-square overflow-hidden rounded-md bg-[#35221a]">
+                        <img
+                          src={nft.image}
+                          alt={nft.name}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      </div>
+                    </div>
 
-            <div className="flex justify-between border-t border-slate-700 pt-4">
-              <span className="font-semibold">
-                Total
-              </span>
+                    <h3 className="mt-3 text-xs font-bold text-kurio-text">
+                      {nft.name}
+                    </h3>
 
-              <span className="text-xl font-bold text-violet-400">
-                {totalPrice.toFixed(2)} ETH
-              </span>
-            </div>
-
-            <Button
-              type="button"
-              className="mt-6 w-full"
-              onClick={handleCheckout}
-            >
-              Finalizar compra
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="mt-3 w-full"
-              onClick={clearCart}
-            >
-              Limpar carrinho
-            </Button>
-          </aside>
-        </div>
+                    <p className="mt-1 text-sm font-bold text-kurio-primary">
+                      {nft.price.toFixed(2)} ETH
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+        </>
       )}
     </section>
   )
