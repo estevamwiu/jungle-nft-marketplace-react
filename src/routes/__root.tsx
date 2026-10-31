@@ -1,14 +1,22 @@
 
+import { useState } from "react"
 import {
   createRootRoute,
   Link,
   Outlet,
   useNavigate,
 } from "@tanstack/react-router"
+import {
+  Menu,
+  X,
+  Search,
+  ShoppingCart,
+  LogIn,
+  LogOut,
+} from "lucide-react"
 
 import { useCart } from "@/features/cart/hooks/use.cart"
 import { useAuth } from "@/features/auth/hooks/use-auth"
-import { Button } from "@/components/ui/button"
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -19,7 +27,15 @@ function RootLayout() {
   const { user, isAuthenticated, isLoading, logout } = useAuth()
   const navigate = useNavigate()
 
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  function closeMenu() {
+    setMenuOpen(false)
+  }
+
   async function handleLogout() {
+    closeMenu()
+
     try {
       await logout()
     } finally {
@@ -27,87 +43,237 @@ function RootLayout() {
     }
   }
 
+  function goToMarketplace() {
+    closeMenu()
+    void navigate({ to: "/", hash: "marketplace" })
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <header className="border-b border-slate-800 bg-slate-900">
-        <nav className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4">
+    <div className="min-h-screen bg-kurio-bg text-kurio-text">
+      {/* =====================================
+          NAVBAR
+      ===================================== */}
+      <header className="sticky top-0 z-50 border-b border-[#493026] bg-kurio-bg/95 backdrop-blur-md">
+        <nav className="kurio-container flex h-18 items-center justify-between gap-4">
+          {/* Logo */}
           <Link
             to="/"
-            className="text-xl font-bold text-violet-400"
+            onClick={closeMenu}
+            className="text-lg font-bold tracking-[0.18em] text-kurio-text"
           >
-            Jungle NFT
+            KURIO
           </Link>
 
-          <div className="flex flex-wrap items-center gap-3 sm:gap-6">
+          {/* Navegação desktop */}
+          <div className="hidden h-full items-center gap-8 md:flex">
             <Link
               to="/"
               activeProps={{
-                className: "text-violet-400",
+                className: "text-kurio-primary",
               }}
-              className="text-sm transition-colors hover:text-violet-400"
+              className="flex h-full items-center border-b-2 border-transparent text-sm transition-colors hover:text-kurio-primary"
             >
-              Explorar
+              Início
             </Link>
+
+            <button
+              type="button"
+              onClick={goToMarketplace}
+              className="text-sm text-kurio-text transition-colors hover:text-kurio-primary"
+            >
+              Mercado
+            </button>
+
+            <span
+              title="Página em desenvolvimento"
+              className="cursor-not-allowed text-sm text-kurio-muted"
+            >
+              Criadores
+            </span>
+
+            <span
+              title="Página em desenvolvimento"
+              className="cursor-not-allowed text-sm text-kurio-muted"
+            >
+              Aprenda
+            </span>
+          </div>
+
+          {/* Ações desktop */}
+          <div className="hidden items-center gap-5 md:flex">
+            <button
+              type="button"
+              onClick={goToMarketplace}
+              aria-label="Explorar NFTs"
+              className="transition-colors hover:text-kurio-primary"
+            >
+              <Search size={19} />
+            </button>
 
             <Link
               to="/cart"
-              activeProps={{
-                className: "text-violet-400",
-              }}
-              className="flex items-center gap-2 text-sm transition-colors hover:text-violet-400"
+              aria-label={`Carrinho com ${totalItems} itens`}
+              className="relative transition-colors hover:text-kurio-primary"
             >
-              <span>Carrinho</span>
+              <ShoppingCart size={20} />
 
               {totalItems > 0 && (
-                <span
-                  className="flex min-w-6 items-center justify-center rounded-full bg-violet-600 px-2 py-1 text-xs font-bold text-white"
-                  aria-label={`${totalItems} itens no carrinho`}
-                >
+                <span className="absolute -right-3 -top-3 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-kurio-primary px-1 text-[10px] font-bold text-kurio-bg">
                   {totalItems}
                 </span>
               )}
             </Link>
 
             {isLoading ? (
-              <span className="text-sm text-slate-400">
+              <span className="text-xs text-kurio-muted">
                 Carregando...
               </span>
             ) : isAuthenticated && user ? (
               <div className="flex items-center gap-3">
-                <span className="text-sm text-slate-300">
+                <span className="max-w-36 truncate text-xs text-kurio-text">
                   Olá, {user.name}
                 </span>
 
-                <Button
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
                   onClick={() => void handleLogout()}
+                  className="flex items-center gap-2 rounded bg-kurio-primary px-3 py-2 text-xs font-bold text-kurio-bg transition-colors hover:bg-[#e6a15f]"
                 >
+                  <LogOut size={15} />
                   Sair
-                </Button>
+                </button>
               </div>
             ) : (
               <Link
                 to="/login"
-                activeProps={{
-                  className: "text-violet-400",
-                }}
-                className="text-sm transition-colors hover:text-violet-400"
+                className="flex items-center gap-2 rounded bg-kurio-primary px-3 py-2 text-xs font-bold text-kurio-bg transition-colors hover:bg-[#e6a15f]"
               >
+                <LogIn size={15} />
                 Entrar
               </Link>
             )}
           </div>
+
+          {/* Ações mobile */}
+          <div className="flex items-center gap-5 md:hidden">
+            <Link
+              to="/cart"
+              aria-label={`Carrinho com ${totalItems} itens`}
+              className="relative"
+              onClick={closeMenu}
+            >
+              <ShoppingCart size={21} />
+
+              {totalItems > 0 && (
+                <span className="absolute -right-3 -top-3 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-kurio-primary px-1 text-[10px] font-bold text-kurio-bg">
+                  {totalItems}
+                </span>
+              )}
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setMenuOpen((value) => !value)}
+              aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
+              aria-expanded={menuOpen}
+              aria-controls="kurio-mobile-menu"
+            >
+              {menuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </nav>
+
+        {/* Menu mobile */}
+        {menuOpen && (
+          <div
+            id="kurio-mobile-menu"
+            className="border-t border-[#493026] bg-kurio-surface px-6 py-5 md:hidden"
+          >
+            <div className="flex flex-col gap-5">
+              <Link
+                to="/"
+                onClick={closeMenu}
+                className="text-sm hover:text-kurio-primary"
+              >
+                Início
+              </Link>
+
+              <button
+                type="button"
+                onClick={goToMarketplace}
+                className="text-left text-sm hover:text-kurio-primary"
+              >
+                Mercado
+              </button>
+
+              <span className="text-sm text-kurio-muted">
+                Criadores (em breve)
+              </span>
+
+              <span className="text-sm text-kurio-muted">
+                Aprenda (em breve)
+              </span>
+
+              <div className="border-t border-[#493026] pt-4">
+                {isLoading ? (
+                  <span className="text-sm text-kurio-muted">
+                    Carregando...
+                  </span>
+                ) : isAuthenticated && user ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm">
+                      Olá, {user.name}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => void handleLogout()}
+                      className="flex items-center gap-2 rounded bg-kurio-primary px-3 py-2 text-xs font-bold text-kurio-bg"
+                    >
+                      <LogOut size={15} />
+                      Sair
+                    </button>
+                  </div>
+                ) : (
+                  <Link
+                    to="/login"
+                    onClick={closeMenu}
+                    className="inline-flex items-center gap-2 rounded bg-kurio-primary px-4 py-2 text-sm font-bold text-kurio-bg"
+                  >
+                    <LogIn size={16} />
+                    Entrar
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
-      <main className="mx-auto max-w-7xl px-4">
+      {/* =====================================
+          CONTEÚDO
+      ===================================== */}
+      <main className="kurio-container min-h-[70vh]">
         <Outlet />
       </main>
 
-      <footer className="mt-16 border-t border-slate-800 py-6 text-center text-sm text-slate-500">
-        Jungle NFT Marketplace
+      {/* =====================================
+          FOOTER TEMPORÁRIO
+      ===================================== */}
+      <footer className="mt-20 border-t border-[#493026] bg-kurio-surface py-8">
+        <div className="kurio-container flex flex-col items-center justify-between gap-3 text-xs text-kurio-muted sm:flex-row">
+          <span className="font-bold tracking-widest text-kurio-text">
+            KURIO
+          </span>
+
+          <span>
+            Marketplace de arte digital
+          </span>
+
+          <span>
+            © {new Date().getFullYear()} Kurio
+          </span>
+        </div>
       </footer>
     </div>
   )

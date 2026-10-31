@@ -1,6 +1,7 @@
 
 import { Link } from "@tanstack/react-router"
-import { Button } from "@/components/ui/button"
+import { ArrowUpRight, ShoppingCart } from "lucide-react"
+
 import type { NFT } from "../types"
 import { useCart } from "@/features/cart/hooks/use.cart"
 
@@ -10,39 +11,65 @@ interface NFTCardProps {
 
 export function NFTCard({ nft }: NFTCardProps) {
   const { addItem } = useCart()
+
   return (
-    <article className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900 transition-transform hover:-translate-y-1">
+    <article className="group flex h-full flex-col overflow-hidden border border-[#493026] bg-kurio-surface transition-all duration-300 hover:-translate-y-1 hover:border-kurio-primary/70 hover:shadow-[0_12px_35px_rgba(0,0,0,0.25)]">
       <Link
         to="/nft/$id"
         params={{ id: nft.id }}
         className="block"
       >
-        <img
-          src={nft.image}
-          alt={nft.name}
-          loading="lazy"
-          className="aspect-square w-full object-cover"
-        />
+        <div className="relative overflow-hidden bg-[#35221a]">
+          <img
+            src={nft.image}
+            alt={nft.name}
+            loading="lazy"
+            className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
 
-        <div className="space-y-3 p-5">
-          <h2 className="text-xl font-semibold text-white">
-            {nft.name}
-          </h2>
+          <span className="absolute left-3 top-3 border border-[#493026] bg-kurio-bg/90 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-kurio-primary backdrop-blur-sm">
+            {nft.category}
+          </span>
 
-          <p className="text-sm text-slate-400">
-            Criado por {nft.creator}
-          </p>
+          <span className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center border border-[#493026] bg-kurio-bg/90 text-kurio-text transition-colors group-hover:border-kurio-primary group-hover:text-kurio-primary">
+            <ArrowUpRight size={18} />
+          </span>
+        </div>
 
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-violet-400">
-              {nft.price} ETH
-            </span>
+        <div className="space-y-4 p-5">
+          <div>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-kurio-muted">
+              Colecionável digital
+            </p>
+
+            <h3 className="line-clamp-1 text-lg font-bold text-kurio-text transition-colors group-hover:text-kurio-primary">
+              {nft.name}
+            </h3>
+
+            <p className="mt-2 line-clamp-1 text-xs text-kurio-muted">
+              Criado por{" "}
+              <span className="text-kurio-text">
+                {nft.creator}
+              </span>
+            </p>
+          </div>
+
+          <div className="flex items-end justify-between gap-3 border-t border-[#493026] pt-4">
+            <div>
+              <p className="mb-2 text-[10px] uppercase tracking-wider text-kurio-muted">
+                Preço atual
+              </p>
+
+              <p className="text-xl font-bold text-kurio-primary">
+                {nft.price} ETH
+              </p>
+            </div>
 
             <span
               className={
                 nft.available
-                  ? "text-sm text-green-400"
-                  : "text-sm text-red-400"
+                  ? "text-right text-[10px] font-bold uppercase tracking-wide text-emerald-400"
+                  : "text-right text-[10px] font-bold uppercase tracking-wide text-red-400"
               }
             >
               {nft.available
@@ -53,15 +80,19 @@ export function NFTCard({ nft }: NFTCardProps) {
         </div>
       </Link>
 
-      <div className="px-5 pb-5">
-        <Button
+      <div className="mt-auto px-5 pb-5">
+        <button
           type="button"
           disabled={!nft.available}
           onClick={() => addItem(nft)}
-          className="w-full"
+          className="flex w-full items-center justify-center gap-2 bg-kurio-primary px-4 py-3 text-xs font-bold uppercase tracking-wide text-kurio-bg transition-colors hover:bg-[#e6a15f] disabled:cursor-not-allowed disabled:bg-[#493026] disabled:text-kurio-muted"
         >
-          {nft.available ? "Adicionar ao carrinho" : "Indisponível"}
-        </Button>
+          <ShoppingCart size={16} />
+
+          {nft.available
+            ? "Adicionar ao carrinho"
+            : "Indisponível"}
+        </button>
       </div>
     </article>
   )
