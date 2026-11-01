@@ -90,10 +90,11 @@ The HTML report is written to `playwright-report/`.
 The Playwright suite currently checks catalog filters, sorting, pagination and
 history, direct NFT routes and not-found handling, latency and catalog
 recovery, account isolation and expired sessions, favorite failure recovery,
-cart quantity/coupon persistence, and successful, declined and timed-out
-checkout flows, plus pending-order recovery after a socket interruption and
-reload, live Socket.IO price updates, stale/duplicate event handling, profile
-persistence, cart additions made while an order is pending, and keyboard
-focus behavior for the image dialog. Each flow runs at 1440px desktop and
-390px mobile. Broader wallet/form accessibility and visual-baseline coverage
-is still being expanded.
+registration and invalid-login feedback, password changes, wallet validation
+and persistence, cart quantity/coupon persistence and invalid/expired coupon
+feedback, and successful, declined and timed-out checkout flows. It also
+covers wallet-connection retry, pending-order recovery after a socket
+interruption and reload, live Socket.IO price updates, stale/duplicate event
+handling, profile persistence, cart additions made while an order is pending,
+and keyboard focus behavior for the image dialog. Each flow runs at 1440px
+desktop and 390px mobile. Visual-baseline coverage is still being expanded.

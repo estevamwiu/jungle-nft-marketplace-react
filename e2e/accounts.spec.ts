@@ -75,3 +75,24 @@ test("profile changes persist after a page reload", async ({ page }) => {
     "updated-collector"
   )
 })
+
+test("password changes reject wrong credentials and allow login with the new password", async ({
+  page,
+}) => {
+  await loginAs(page)
+  await page.goto("/profile")
+  await page.locator("#current-password").fill("wrong-password")
+  await page.locator("#new-password").fill("new-password")
+  await page.locator("#confirm-new-password").fill("new-password")
+  await page.getByRole("button", { name: "Salvar nova senha" }).click()
+  await expect(page.getByRole("alert")).toHaveText(
+    "A senha atual está incorreta."
+  )
+
+  await page.locator("#current-password").fill("123456")
+  await page.getByRole("button", { name: "Salvar nova senha" }).click()
+  await expect(page.getByText("Senha alterada com sucesso.")).toBeVisible()
+  await page.goto("/")
+  await logout(page)
+  await loginAs(page, "demo@jungle.com", "new-password")
+})

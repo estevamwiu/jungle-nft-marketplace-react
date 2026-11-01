@@ -30,25 +30,30 @@ export async function logout(page: Page) {
   const headerLogout = page
     .locator("header")
     .getByRole("button", { name: "Sair" })
+  const isMobile = (page.viewportSize()?.width ?? 0) < 768
 
-  if ((await menuButton.isVisible()) && !(await headerLogout.isVisible())) {
+  if (isMobile) {
     await menuButton.click()
+    await page
+      .locator("#kurio-mobile-menu")
+      .getByRole("button", { name: "Sair" })
+      .click()
+  } else {
+    await headerLogout.click()
   }
 
-  await headerLogout.click()
   await expect(page).toHaveURL(/\/(?:\?.*)?$/)
 
-  if (
-    (await menuButton.isVisible()) &&
-    !(await page
-      .locator("header")
-      .getByRole("link", { name: "Entrar" })
-      .isVisible())
-  ) {
+  if (isMobile) {
     await menuButton.click()
+    await expect(
+      page
+        .locator("#kurio-mobile-menu")
+        .getByRole("link", { name: "Entrar" })
+    ).toBeVisible()
+  } else {
+    await expect(
+      page.locator("header").getByRole("link", { name: "Entrar" })
+    ).toBeVisible()
   }
-
-  await expect(
-    page.locator("header").getByRole("link", { name: "Entrar" })
-  ).toBeVisible()
 }

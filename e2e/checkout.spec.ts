@@ -3,7 +3,8 @@ import { loginAs } from "./helpers"
 
 async function openCheckout(
   page: Page,
-  scenario = "default"
+  scenario = "default",
+  connectWallet = true
 ) {
   await loginAs(page)
   await page.goto(`/nft/1?scenario=${scenario}`)
@@ -19,10 +20,12 @@ async function openCheckout(
     .fill(`0x${"a".repeat(40)}`)
   await page.getByLabel("Tipo de carteira").selectOption("MetaMask")
   await page.locator("#email").fill("demo@jungle.com")
-  await page.getByRole("button", { name: "Conectar carteira" }).click()
-  await expect(
-    page.getByText("Carteira conectada para esta simulação.")
-  ).toBeVisible()
+  if (connectWallet) {
+    await page.getByRole("button", { name: "Conectar carteira" }).click()
+    await expect(
+      page.getByText("Carteira conectada para esta simulação.")
+    ).toBeVisible()
+  }
 }
 
 test("a successful purchase reaches its confirmed receipt", async ({
@@ -80,6 +83,50 @@ test("declined payments leave the cart available for recovery", async ({
   await expect(
     page.getByText("Emerald Ape #042").first()
   ).toBeVisible()
+})
+
+test("rejected wallet connection can be retried", async ({ page }) => {
+  await openCheckout(page, "wallet-rejected", false)
+  await page.getByRole("button", { name: "Conectar carteira" }).click()
+  await expect(
+    page.getByRole("alert").filter({
+      hasText: "A conexão da carteira foi recusada.",
+    })
+  ).toBeVisible()
+
+  await page.goto("/checkout?scenario=default")
+  await page.getByLabel("Nome de exibição").fill("Demo Collector")
+  await page.getByLabel("Nome de usuário").fill("demo-collector")
+  await page.getByLabel("Rede").selectOption("Ethereum")
+  await page.getByLabel("Nome do perfil").fill("Kurio Demo")
+  await page
+    .getByLabel("Endereço da carteira")
+    .fill(`0x${"a".repeat(40)}`)
+  await page.getByLabel("Tipo de carteira").selectOption("MetaMask")
+  await page.locator("#email").fill("demo@jungle.com")
+  await page.getByRole("button", { name: "Conectar carteira" }).click()
+  await expect(
+    page.getByText("Carteira conectada para esta simulação.")
+  ).toBeVisible()
+  const confirmButton = page.getByRole("button", {
+    name: "Confirmar compra",
+  })
+  const receipt = page.getByRole("heading", { name: "Compra concluída!" })
+  const stalePriceAlert = page
+    .getByRole("alert")
+    .filter({ hasText: "O preço de um NFT foi atualizado." })
+
+  await confirmButton.click()
+  await expect
+    .poll(async () => (await receipt.isVisible()) || (await stalePriceAlert.isVisible()))
+    .toBe(true)
+
+  if (await stalePriceAlert.isVisible()) {
+    await expect(confirmButton).toBeEnabled()
+    await confirmButton.click()
+  }
+
+  await expect(receipt).toBeVisible({ timeout: 10_000 })
 })
 
 test("pending orders recover after a socket interruption and page reload", async ({
