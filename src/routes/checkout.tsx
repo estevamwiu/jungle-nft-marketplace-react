@@ -6,17 +6,19 @@ import {
 } from "@tanstack/react-router"
 import { isAxiosError } from "axios"
 import {
-  Check,
   ChevronDown,
   ShoppingBag,
   Wallet,
-  X,
 } from "lucide-react"
 
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { useCart } from "@/features/cart/hooks/use.cart"
 import { createOrder } from "@/features/checkout/api/checkout-api"
 import { saveOrder } from "@/features/activity/order-storage"
+import {
+  OrderConfirmationDialog,
+  type CompletedOrder,
+} from "@/features/checkout/components/OrderConfirmationDialog"
 
 export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
@@ -35,18 +37,6 @@ interface CollectorForm {
   ensName: string
   useAnotherWallet: boolean
   notes: string
-}
-
-interface CompletedOrder {
-  orderId: string
-  total: number
-  items: {
-    id: string
-    name: string
-    image: string
-    price: number
-    quantity: number
-  }[]
 }
 
 const initialForm: CollectorForm = {
@@ -152,7 +142,11 @@ function CheckoutPage() {
     }
 
     if (form.network === "Solana") {
-      if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(form.walletAddress.trim())) {
+      if (
+        !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(
+          form.walletAddress.trim()
+        )
+      ) {
         setError("Informe um endereço de carteira Solana válido.")
         return
       }
@@ -199,6 +193,7 @@ function CheckoutPage() {
         orderId: completedPurchase.orderId,
         total: completedPurchase.total,
         items: completedPurchase.items,
+        createdAt: completedPurchase.createdAt,
       })
 
       clearCart()
@@ -218,118 +213,10 @@ function CheckoutPage() {
 
   if (completedOrder) {
     return (
-      <div
-        className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/80 px-4 py-8 backdrop-blur-sm"
-        role="presentation"
-      >
-        <section
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="purchase-success-title"
-          className="relative my-auto w-full max-w-lg border border-[#704b35] bg-kurio-surface shadow-2xl"
-        >
-          <button
-            type="button"
-            onClick={() => void navigate({ to: "/" })}
-            aria-label="Fechar confirmação"
-            className="absolute right-4 top-4 text-kurio-muted transition-colors hover:text-kurio-primary"
-          >
-            <X size={20} />
-          </button>
-
-          <div className="border-b border-[#493026] px-6 pb-7 pt-10 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border-2 border-kurio-primary text-kurio-primary">
-              <Check size={34} strokeWidth={2.5} />
-            </div>
-
-            <h1
-              id="purchase-success-title"
-              className="mt-5 text-2xl font-black text-kurio-text"
-            >
-              Transação concluída!
-            </h1>
-
-            <p className="mt-3 text-sm leading-6 text-kurio-muted">
-              Sua compra foi registrada com sucesso.
-            </p>
-          </div>
-
-          <div className="max-h-[55vh] overflow-y-auto px-6 py-6">
-            <div className="grid gap-4 border-b border-[#493026] pb-5 text-xs sm:grid-cols-2">
-              <div>
-                <p className="text-kurio-muted">
-                  Identificador do pedido
-                </p>
-
-                <p
-                  title={completedOrder.orderId}
-                  className="mt-2 break-all font-bold text-kurio-text"
-                >
-                  {completedOrder.orderId}
-                </p>
-              </div>
-
-              <div className="sm:text-right">
-                <p className="text-kurio-muted">
-                  Valor total
-                </p>
-
-                <p className="mt-2 text-lg font-black text-kurio-primary">
-                  {completedOrder.total.toFixed(2)} ETH
-                </p>
-              </div>
-            </div>
-
-            <h2 className="mb-4 mt-5 text-sm font-bold text-kurio-text">
-              NFTs adquiridos
-            </h2>
-
-            <div className="space-y-3">
-              {completedOrder.items.map((item) => (
-                <article
-                  key={item.id}
-                  className="flex items-center gap-3 border border-[#493026] bg-kurio-bg p-3"
-                >
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="h-14 w-14 shrink-0 rounded object-cover"
-                  />
-
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-xs font-bold text-kurio-text">
-                      {item.name}
-                    </h3>
-
-                    <p className="mt-1 text-[11px] text-kurio-muted">
-                      Quantidade: {item.quantity}
-                    </p>
-                  </div>
-
-                  <span className="text-xs font-bold text-kurio-primary">
-                    {(item.price * item.quantity).toFixed(2)} ETH
-                  </span>
-                </article>
-              ))}
-            </div>
-
-            <p className="mt-6 text-center text-xs leading-6 text-kurio-muted">
-              Esta transação é uma simulação. Nenhum pagamento
-              real ou transferência de NFT foi realizado.
-            </p>
-          </div>
-
-          <div className="border-t border-[#493026] px-6 py-5">
-            <button
-              type="button"
-              onClick={() => void navigate({ to: "/" })}
-              className="w-full rounded bg-kurio-primary px-6 py-4 text-sm font-bold text-kurio-bg transition-colors hover:bg-[#e6a15f]"
-            >
-              Voltar ao marketplace
-            </button>
-          </div>
-        </section>
-      </div>
+      <OrderConfirmationDialog
+        order={completedOrder}
+        onClose={() => void navigate({ to: "/" })}
+      />
     )
   }
 
@@ -438,8 +325,12 @@ function CheckoutPage() {
 
           <div className="grid gap-x-5 gap-y-5 sm:grid-cols-2">
             <div>
-              <label htmlFor="displayName" className={labelClass}>
-                Nome de exibição <span className="text-kurio-primary">*</span>
+              <label
+                htmlFor="displayName"
+                className={labelClass}
+              >
+                Nome de exibição{" "}
+                <span className="text-kurio-primary">*</span>
               </label>
 
               <input
@@ -455,8 +346,12 @@ function CheckoutPage() {
             </div>
 
             <div>
-              <label htmlFor="username" className={labelClass}>
-                Nome de usuário <span className="text-kurio-primary">*</span>
+              <label
+                htmlFor="username"
+                className={labelClass}
+              >
+                Nome de usuário{" "}
+                <span className="text-kurio-primary">*</span>
               </label>
 
               <input
@@ -472,8 +367,12 @@ function CheckoutPage() {
             </div>
 
             <div>
-              <label htmlFor="network" className={labelClass}>
-                Rede <span className="text-kurio-primary">*</span>
+              <label
+                htmlFor="network"
+                className={labelClass}
+              >
+                Rede{" "}
+                <span className="text-kurio-primary">*</span>
               </label>
 
               <div className="relative">
@@ -486,10 +385,18 @@ function CheckoutPage() {
                   }
                   className={`${inputClass} appearance-none pr-9`}
                 >
-                  <option value="">Selecione uma rede</option>
-                  <option value="Ethereum">Ethereum</option>
-                  <option value="Polygon">Polygon</option>
-                  <option value="Solana">Solana</option>
+                  <option value="">
+                    Selecione uma rede
+                  </option>
+                  <option value="Ethereum">
+                    Ethereum
+                  </option>
+                  <option value="Polygon">
+                    Polygon
+                  </option>
+                  <option value="Solana">
+                    Solana
+                  </option>
                 </select>
 
                 <ChevronDown
@@ -500,8 +407,12 @@ function CheckoutPage() {
             </div>
 
             <div>
-              <label htmlFor="profileName" className={labelClass}>
-                Nome do perfil <span className="text-kurio-primary">*</span>
+              <label
+                htmlFor="profileName"
+                className={labelClass}
+              >
+                Nome do perfil{" "}
+                <span className="text-kurio-primary">*</span>
               </label>
 
               <input
@@ -517,8 +428,12 @@ function CheckoutPage() {
             </div>
 
             <div>
-              <label htmlFor="walletAddress" className={labelClass}>
-                Endereço da carteira <span className="text-kurio-primary">*</span>
+              <label
+                htmlFor="walletAddress"
+                className={labelClass}
+              >
+                Endereço da carteira{" "}
+                <span className="text-kurio-primary">*</span>
               </label>
 
               <input
@@ -537,8 +452,12 @@ function CheckoutPage() {
 
             {form.useAnotherWallet && (
               <div>
-                <label htmlFor="secondaryWallet" className={labelClass}>
-                  Carteira secundária <span className="text-kurio-primary">*</span>
+                <label
+                  htmlFor="secondaryWallet"
+                  className={labelClass}
+                >
+                  Carteira secundária{" "}
+                  <span className="text-kurio-primary">*</span>
                 </label>
 
                 <input
@@ -547,7 +466,10 @@ function CheckoutPage() {
                   required
                   value={form.secondaryWallet}
                   onChange={(event) =>
-                    updateForm("secondaryWallet", event.target.value)
+                    updateForm(
+                      "secondaryWallet",
+                      event.target.value
+                    )
                   }
                   placeholder="Endereço da carteira secundária"
                   autoComplete="off"
@@ -557,8 +479,12 @@ function CheckoutPage() {
             )}
 
             <div>
-              <label htmlFor="walletType" className={labelClass}>
-                Tipo de carteira <span className="text-kurio-primary">*</span>
+              <label
+                htmlFor="walletType"
+                className={labelClass}
+              >
+                Tipo de carteira{" "}
+                <span className="text-kurio-primary">*</span>
               </label>
 
               <div className="relative">
@@ -571,10 +497,18 @@ function CheckoutPage() {
                   }
                   className={`${inputClass} appearance-none pr-9`}
                 >
-                  <option value="">Selecione uma carteira</option>
-                  <option value="MetaMask">MetaMask</option>
-                  <option value="Coinbase Wallet">Coinbase Wallet</option>
-                  <option value="WalletConnect">WalletConnect</option>
+                  <option value="">
+                    Selecione uma carteira
+                  </option>
+                  <option value="MetaMask">
+                    MetaMask
+                  </option>
+                  <option value="Coinbase Wallet">
+                    Coinbase Wallet
+                  </option>
+                  <option value="WalletConnect">
+                    WalletConnect
+                  </option>
                 </select>
 
                 <ChevronDown
@@ -585,7 +519,10 @@ function CheckoutPage() {
             </div>
 
             <div>
-              <label htmlFor="referralCode" className={labelClass}>
+              <label
+                htmlFor="referralCode"
+                className={labelClass}
+              >
                 Código de indicação (opcional)
               </label>
 
@@ -601,8 +538,12 @@ function CheckoutPage() {
             </div>
 
             <div>
-              <label htmlFor="email" className={labelClass}>
-                E-mail <span className="text-kurio-primary">*</span>
+              <label
+                htmlFor="email"
+                className={labelClass}
+              >
+                E-mail{" "}
+                <span className="text-kurio-primary">*</span>
               </label>
 
               <input
@@ -619,7 +560,10 @@ function CheckoutPage() {
             </div>
 
             <div>
-              <label htmlFor="ensName" className={labelClass}>
+              <label
+                htmlFor="ensName"
+                className={labelClass}
+              >
                 Nome ENS (opcional)
               </label>
 
@@ -650,7 +594,10 @@ function CheckoutPage() {
           </label>
 
           <div className="mt-6">
-            <label htmlFor="notes" className={labelClass}>
+            <label
+              htmlFor="notes"
+              className={labelClass}
+            >
               Observação do colecionador (opcional)
             </label>
 
@@ -715,7 +662,10 @@ function CheckoutPage() {
 
           <div className="mt-7 space-y-4 text-sm">
             <div className="flex justify-between gap-4">
-              <span className="text-kurio-text">Subtotal</span>
+              <span className="text-kurio-text">
+                Subtotal
+              </span>
+
               <span className="text-kurio-text">
                 {totalPrice.toFixed(2)} ETH
               </span>
@@ -725,6 +675,7 @@ function CheckoutPage() {
               <span className="text-kurio-text">
                 Desconto do lançamento
               </span>
+
               <span className="text-kurio-muted">
                 (-) 0.00 ETH
               </span>
@@ -734,6 +685,7 @@ function CheckoutPage() {
               <span className="text-kurio-text">
                 Taxa de rede
               </span>
+
               <span className="text-kurio-muted">
                 Não simulada
               </span>
@@ -741,7 +693,10 @@ function CheckoutPage() {
           </div>
 
           <div className="mt-6 flex justify-between border-t border-[#493026] pt-5 text-base font-bold">
-            <span className="text-kurio-text">Total</span>
+            <span className="text-kurio-text">
+              Total
+            </span>
+
             <span className="text-kurio-primary">
               {totalPrice.toFixed(2)} ETH
             </span>
@@ -753,31 +708,33 @@ function CheckoutPage() {
             </h3>
 
             <div className="space-y-3">
-              {["MetaMask", "Coinbase Wallet", "WalletConnect"].map(
-                (wallet) => (
-                  <label
-                    key={wallet}
-                    className={`flex cursor-pointer items-center gap-3 border px-4 py-3 text-xs transition-colors ${
-                      form.walletType === wallet
-                        ? "border-kurio-primary text-kurio-primary"
-                        : "border-[#493026] text-kurio-text hover:border-[#80502e]"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="selectedWallet"
-                      value={wallet}
-                      checked={form.walletType === wallet}
-                      onChange={() =>
-                        updateForm("walletType", wallet)
-                      }
-                      className="accent-[#d58d49]"
-                    />
+              {[
+                "MetaMask",
+                "Coinbase Wallet",
+                "WalletConnect",
+              ].map((wallet) => (
+                <label
+                  key={wallet}
+                  className={`flex cursor-pointer items-center gap-3 border px-4 py-3 text-xs transition-colors ${
+                    form.walletType === wallet
+                      ? "border-kurio-primary text-kurio-primary"
+                      : "border-[#493026] text-kurio-text hover:border-[#80502e]"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="selectedWallet"
+                    value={wallet}
+                    checked={form.walletType === wallet}
+                    onChange={() =>
+                      updateForm("walletType", wallet)
+                    }
+                    className="accent-[#d58d49]"
+                  />
 
-                    {wallet}
-                  </label>
-                )
-              )}
+                  {wallet}
+                </label>
+              ))}
             </div>
           </div>
 
@@ -795,7 +752,9 @@ function CheckoutPage() {
             disabled={isSubmitting}
             className="mt-7 w-full rounded bg-kurio-primary px-5 py-4 text-sm font-bold text-kurio-bg transition-colors hover:bg-[#e6a15f] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSubmitting ? "Processando..." : "Confirmar compra"}
+            {isSubmitting
+              ? "Processando..."
+              : "Confirmar compra"}
           </button>
 
           <Link
@@ -806,7 +765,8 @@ function CheckoutPage() {
           </Link>
 
           <p className="mt-5 text-center text-[11px] leading-5 text-kurio-muted">
-            Ambiente demonstrativo. Nenhum pagamento real será realizado.
+            Ambiente demonstrativo. Nenhum pagamento real será
+            realizado.
           </p>
         </aside>
       </form>
