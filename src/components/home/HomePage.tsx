@@ -155,8 +155,8 @@ export function HomePage() {
             <div className="relative overflow-hidden border border-[#493026] bg-kurio-surface p-3 sm:p-4">
               <div className="relative aspect-[4/4.5] overflow-hidden bg-[#35221a]">
                 <img
-                  src="/images/monkey-hero.png"
-                  alt="Arte digital Jungle Ape em destaque"
+                  src="/images/sage-nomad.png"
+                  alt="Arte digital Sage Nomad em destaque"
                   className="h-full w-full object-cover"
                 />
 

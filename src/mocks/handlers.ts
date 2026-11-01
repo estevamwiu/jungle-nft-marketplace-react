@@ -1,37 +1,95 @@
-
 import { http, HttpResponse, passthrough } from "msw"
+
 import type { NFT } from "@/features/nft/types"
 
 const nfts: NFT[] = [
   {
     id: "1",
-    name: "Jungle Ape #001",
-    description: "NFT exclusivo da coleção Jungle.",
-    image: "/images/monkey-hero.png",
-    price: 0.25,
-    creator: "Jungle Studio",
+    name: "Emerald Ape #042",
+    description:
+      "Um colecionável exclusivo da coleção Emerald Ape. Com seu estilo marcante, óculos verdes e jaqueta sofisticada, representa a combinação entre arte digital e identidade no universo Web3.",
+    image: "/images/emerald-ape.png",
+    price: 1.19,
+    creator: "Kurio Studio",
     category: "Art",
     available: true,
   },
   {
     id: "2",
-    name: "Cyber Tiger #002",
-    description: "Um tigre digital futurista.",
-    image: "/images/monkey-hero.png",
-    price: 0.45,
-    creator: "Cyber Artist",
-    category: "Gaming",
+    name: "Sage Nomad #014",
+    description:
+      "Um explorador do universo digital. Sage Nomad combina uma estética urbana com elementos clássicos, trazendo personalidade e originalidade para a coleção.",
+    image: "/images/sage-nomad.png",
+    price: 1.49,
+    creator: "Kurio Studio",
+    category: "Art",
     available: true,
   },
   {
     id: "3",
-    name: "Neon Panther #003",
-    description: "Arte digital da coleção Neon.",
-    image: "/images/monkey-hero.png",
-    price: 0.32,
-    creator: "Neon Studio",
+    name: "Ivory Baron #052",
+    description:
+      "Uma peça digital que representa elegância e exclusividade. Ivory Baron apresenta um personagem de visual sofisticado, criado para colecionadores que valorizam arte e identidade.",
+    image: "/images/ivory-baron.png",
+    price: 0.99,
+    creator: "Kurio Studio",
     category: "Art",
-    available: false,
+    available: true,
+  },
+  {
+    id: "4",
+    name: "Cosmic Bloom #118",
+    description:
+      "Uma edição especial inspirada na exploração de novos universos digitais. Cosmic Bloom combina criatividade, expressão artística e o espírito das coleções NFT.",
+    image: "/images/sage-nomad.png",
+    price: 1.29,
+    creator: "Kurio Collective",
+    category: "Collectibles",
+    available: true,
+  },
+  {
+    id: "5",
+    name: "Violet Nomad #214",
+    description:
+      "Uma variação exclusiva da coleção Nomad. Seu visual característico representa liberdade, criatividade e novas possibilidades no universo dos colecionáveis digitais.",
+    image: "/images/sage-nomad.png",
+    price: 1.29,
+    creator: "Kurio Collective",
+    category: "Collectibles",
+    available: true,
+  },
+  {
+    id: "6",
+    name: "Ivory Baron #085",
+    description:
+      "Uma edição alternativa da coleção Ivory Baron, desenvolvida para representar sofisticação e personalidade em uma experiência digital colecionável.",
+    image: "/images/ivory-baron.png",
+    price: 1.79,
+    creator: "Kurio Studio",
+    category: "Art",
+    available: true,
+  },
+  {
+    id: "7",
+    name: "Golden Spirit #207",
+    description:
+      "Golden Spirit representa energia, criatividade e conexão com a cultura digital. Seu visual dourado e seus acessórios modernos tornam esta peça única.",
+    image: "/images/golden-spirit.png",
+    price: 0.99,
+    creator: "Kurio Collective",
+    category: "Collectibles",
+    available: true,
+  },
+  {
+    id: "8",
+    name: "Golden Spirit #108",
+    description:
+      "Uma edição da coleção Golden Spirit que celebra a expressão individual e a criatividade. Uma peça para colecionadores apaixonados por arte digital.",
+    image: "/images/golden-spirit.png",
+    price: 0.39,
+    creator: "Kurio Collective",
+    category: "Collectibles",
+    available: true,
   },
 ]
 
@@ -57,6 +115,7 @@ interface MockSession {
 }
 
 const USERS_STORAGE_KEY = "kurio-mock-users"
+
 const SESSIONS_STORAGE_KEY = "kurio-mock-sessions"
 
 const DEMO_USER: MockUser = {
@@ -242,6 +301,7 @@ export const handlers = [
     }
 
     const token = crypto.randomUUID()
+
     const sessions = readStoredSessions()
 
     sessions.push({
@@ -374,6 +434,7 @@ export const handlers = [
     }
 
     users.push(newUser)
+
     saveUsers(users)
 
     return HttpResponse.json(
