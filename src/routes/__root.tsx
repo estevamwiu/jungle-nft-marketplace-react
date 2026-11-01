@@ -14,12 +14,13 @@ import {
   ShoppingCart,
   LogIn,
   LogOut,
+  UserRound,
 } from "lucide-react"
 
 import { useCart } from "@/features/cart/hooks/use.cart"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { Footer } from "@/components/layout/Footer"
-import { HomePage } from "@/routes/index"
+import { HomePage } from "@/components/home/HomePage"
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -134,9 +135,15 @@ function RootLayout() {
               </span>
             ) : isAuthenticated && user ? (
               <div className="flex items-center gap-3">
-                <span className="max-w-36 truncate text-xs text-kurio-text">
-                  Olá, {user.name}
-                </span>
+                <Link
+                  to="/profile"
+                  className="flex max-w-44 items-center gap-2 text-xs text-kurio-text transition-colors hover:text-kurio-primary"
+                >
+                  <UserRound size={17} />
+                  <span className="truncate">
+                    Olá, {user.name}
+                  </span>
+                </Link>
 
                 <button
                   type="button"
@@ -222,15 +229,20 @@ function RootLayout() {
                     Carregando...
                   </span>
                 ) : isAuthenticated && user ? (
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm">
-                      Olá, {user.name}
-                    </span>
+                  <div className="flex flex-col gap-4">
+                    <Link
+                      to="/profile"
+                      onClick={closeMenu}
+                      className="flex items-center gap-3 text-sm text-kurio-text hover:text-kurio-primary"
+                    >
+                      <UserRound size={17} />
+                      Meu perfil
+                    </Link>
 
                     <button
                       type="button"
                       onClick={() => void handleLogout()}
-                      className="flex items-center gap-2 rounded bg-kurio-primary px-3 py-2 text-xs font-bold text-kurio-bg"
+                      className="flex items-center justify-center gap-2 rounded bg-kurio-primary px-3 py-2 text-xs font-bold text-kurio-bg"
                     >
                       <LogOut size={15} />
                       Sair

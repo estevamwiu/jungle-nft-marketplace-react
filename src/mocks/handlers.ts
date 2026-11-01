@@ -42,17 +42,6 @@ interface MockUser {
   password: string
 }
 
-const DEMO_USER: MockUser = {
-  id: "1",
-  name: "Usuário Demo",
-  email: "demo@jungle.com",
-  password: "123456",
-}
-
-const users: MockUser[] = [DEMO_USER]
-
-const sessions = new Map<string, string>()
-
 interface CheckoutItem {
   nftId: string
   quantity: number
@@ -60,6 +49,96 @@ interface CheckoutItem {
 
 interface CheckoutRequest {
   items?: CheckoutItem[]
+}
+
+interface MockSession {
+  token: string
+  userId: string
+}
+
+const USERS_STORAGE_KEY = "kurio-mock-users"
+const SESSIONS_STORAGE_KEY = "kurio-mock-sessions"
+
+const DEMO_USER: MockUser = {
+  id: "1",
+  name: "Usuário Demo",
+  email: "demo@jungle.com",
+  password: "123456",
+}
+
+function readStoredUsers(): MockUser[] {
+  try {
+    const stored = localStorage.getItem(USERS_STORAGE_KEY)
+
+    if (!stored) {
+      return [DEMO_USER]
+    }
+
+    const parsed: unknown = JSON.parse(stored)
+
+    if (!Array.isArray(parsed)) {
+      return [DEMO_USER]
+    }
+
+    const validUsers = parsed.filter(
+      (item): item is MockUser =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof item.id === "string" &&
+        typeof item.name === "string" &&
+        typeof item.email === "string" &&
+        typeof item.password === "string"
+    )
+
+    return [
+      DEMO_USER,
+      ...validUsers.filter(
+        (user) => user.email !== DEMO_USER.email
+      ),
+    ]
+  } catch {
+    return [DEMO_USER]
+  }
+}
+
+function saveUsers(users: MockUser[]) {
+  localStorage.setItem(
+    USERS_STORAGE_KEY,
+    JSON.stringify(users)
+  )
+}
+
+function readStoredSessions(): MockSession[] {
+  try {
+    const stored = localStorage.getItem(SESSIONS_STORAGE_KEY)
+
+    if (!stored) {
+      return []
+    }
+
+    const parsed: unknown = JSON.parse(stored)
+
+    if (!Array.isArray(parsed)) {
+      return []
+    }
+
+    return parsed.filter(
+      (item): item is MockSession =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof item.token === "string" &&
+        typeof item.userId === "string"
+    )
+  } catch {
+    return []
+  }
+}
+
+function saveSessions(sessions: MockSession[]) {
+  localStorage.setItem(
+    SESSIONS_STORAGE_KEY,
+    JSON.stringify(sessions)
+  )
 }
 
 function toPublicUser(user: MockUser) {
@@ -89,13 +168,19 @@ function getAuthenticatedUser(
     return null
   }
 
-  const userId = sessions.get(token)
+  const session = readStoredSessions().find(
+    (item) => item.token === token
+  )
 
-  if (!userId) {
+  if (!session) {
     return null
   }
 
-  return users.find((user) => user.id === userId) ?? null
+  return (
+    readStoredUsers().find(
+      (user) => user.id === session.userId
+    ) ?? null
+  )
 }
 
 export const handlers = [
@@ -112,7 +197,9 @@ export const handlers = [
   }),
 
   http.get("/api/nfts/:id", ({ params }) => {
-    const nft = nfts.find((item) => item.id === params.id)
+    const nft = nfts.find(
+      (item) => item.id === params.id
+    )
 
     if (!nft) {
       return HttpResponse.json(
@@ -137,7 +224,7 @@ export const handlers = [
     const email = body.email?.trim().toLowerCase()
     const password = body.password
 
-    const user = users.find(
+    const user = readStoredUsers().find(
       (item) =>
         item.email === email &&
         item.password === password
@@ -155,8 +242,14 @@ export const handlers = [
     }
 
     const token = crypto.randomUUID()
+    const sessions = readStoredSessions()
 
-    sessions.set(token, user.id)
+    sessions.push({
+      token,
+      userId: user.id,
+    })
+
+    saveSessions(sessions)
 
     return HttpResponse.json({
       user: toPublicUser(user),
@@ -187,7 +280,11 @@ export const handlers = [
     const token = getToken(request)
 
     if (token) {
-      sessions.delete(token)
+      const sessions = readStoredSessions().filter(
+        (session) => session.token !== token
+      )
+
+      saveSessions(sessions)
     }
 
     return HttpResponse.json({
@@ -252,6 +349,8 @@ export const handlers = [
       )
     }
 
+    const users = readStoredUsers()
+
     const emailExists = users.some(
       (user) => user.email === email
     )
@@ -275,6 +374,7 @@ export const handlers = [
     }
 
     users.push(newUser)
+    saveUsers(users)
 
     return HttpResponse.json(
       {
