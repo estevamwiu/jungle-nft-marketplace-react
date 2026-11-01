@@ -1,217 +1,394 @@
 import {
   useEffect,
   useState,
+  type ChangeEvent,
   type FormEvent,
+  type ReactNode,
 } from "react"
-
-import {
-  createFileRoute,
-  Link,
-  useNavigate,
-} from "@tanstack/react-router"
-
-import {
-  Activity,
-  Bookmark,
-  Check,
-  Copy,
-  Download,
-  Heart,
-  HelpCircle,
-  LogOut,
-  Plus,
-  ShieldCheck,
-  Star,
-  Trash2,
-  UserRound,
-  Wallet,
-  X,
-} from "lucide-react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { isAxiosError } from "axios"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { ChevronDown } from "lucide-react"
 
 import { useAuth } from "@/features/auth/hooks/use-auth"
+import { AccountSidebar } from "@/components/account/AccountSidebar"
+import {
+  getWallets,
+  saveWallets,
+} from "@/features/account/api/account-api"
+import type {
+  StoredWallets,
+  WalletData,
+} from "@/features/account/types"
 
 export const Route = createFileRoute("/wallets")({
   component: WalletsPage,
 })
 
-type SavedWallet = {
-  id: string
-  name: string
-  address: string
-  primary: boolean
+type WalletErrors = Partial<Record<keyof WalletData, string>>
+
+const emptyWallet: WalletData = {
+  displayName: "",
+  nickname: "",
+  network: "",
+  profileName: "",
+  address: "",
+  secondaryAddress: "",
+  walletType: "",
+  referralCode: "",
+  email: "",
+  ensName: "",
 }
 
-const ADDRESS_PATTERN = /^0x[a-fA-F0-9]{40}$/
+const requiredFields: [keyof WalletData, string][] = [
+  ["displayName", "Informe o nome de exibição."],
+  ["nickname", "Informe o apelido da carteira."],
+  ["network", "Selecione uma rede."],
+  ["profileName", "Informe o nome do perfil."],
+  ["address", "Informe o endereço da carteira."],
+  ["walletType", "Selecione o tipo de carteira."],
+  ["referralCode", "Informe o código de indicação."],
+  ["email", "Informe o e-mail."],
+  ["ensName", "Informe o nome ENS."],
+]
 
-function readWallets(userId: string): SavedWallet[] {
-  try {
-    const raw = localStorage.getItem(
-      `kurio-wallets-${userId}`
-    )
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const EVM_PATTERN = /^0x[a-fA-F0-9]{40}$/
+const SOLANA_PATTERN = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
 
-    if (!raw) return []
+function validate(data: WalletData): WalletErrors {
+  const errors: WalletErrors = {}
 
-    const parsed: unknown = JSON.parse(raw)
-
-    if (!Array.isArray(parsed)) return []
-
-    return parsed.filter(
-      (wallet): wallet is SavedWallet =>
-        typeof wallet === "object" &&
-        wallet !== null &&
-        typeof wallet.id === "string" &&
-        typeof wallet.name === "string" &&
-        typeof wallet.address === "string" &&
-        ADDRESS_PATTERN.test(wallet.address) &&
-        typeof wallet.primary === "boolean"
-    )
-  } catch {
-    return []
+  for (const [field, message] of requiredFields) {
+    if (!data[field].trim()) {
+      errors[field] = message
+    }
   }
+
+  if (data.email.trim() && !EMAIL_PATTERN.test(data.email.trim())) {
+    errors.email = "Informe um e-mail válido."
+  }
+
+  const address = data.address.trim()
+
+  if (address && (data.network === "Ethereum" || data.network === "Polygon")) {
+    if (!EVM_PATTERN.test(address)) {
+      errors.address = "Use um endereço 0x com 40 caracteres hexadecimais."
+    }
+  }
+
+  if (address && data.network === "Solana" && !SOLANA_PATTERN.test(address)) {
+    errors.address = "Informe um endereço Solana válido."
+  }
+
+  return errors
+}
+
+const inputClass =
+  "h-10 w-full border border-[#5a2f1e] bg-kurio-bg px-3 text-sm text-kurio-text outline-none transition-colors placeholder:text-[#8d6f55] focus:border-kurio-primary aria-[invalid=true]:border-red-500"
+
+interface FieldProps {
+  id: string
+  label: string
+  required?: boolean
+  error?: string
+  children: ReactNode
+}
+
+function Field({ id, label, required, error, children }: FieldProps) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-2 block text-sm text-kurio-text">
+        {label}
+        {required && (
+          <span aria-hidden="true" className="ml-0.5 text-[#e3764c]">
+            *
+          </span>
+        )}
+      </label>
+
+      {children}
+
+      {error && (
+        <p id={`${id}-error`} role="alert" className="mt-1.5 text-xs text-red-400">
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function SelectBox({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative">
+      {children}
+      <ChevronDown
+        size={15}
+        className="pointer-events-none absolute right-3 top-3 text-kurio-primary"
+      />
+    </div>
+  )
+}
+
+interface WalletFormProps {
+  idPrefix: string
+  initial: WalletData
+  onSave: (data: WalletData) => void
+  isSaving: boolean
+}
+
+function WalletForm({
+  idPrefix,
+  initial,
+  onSave,
+  isSaving,
+}: WalletFormProps) {
+  const [data, setData] = useState<WalletData>(initial)
+  const [errors, setErrors] = useState<WalletErrors>({})
+
+  const idOf = (field: keyof WalletData) => `${idPrefix}-${field}`
+
+  function update(field: keyof WalletData, value: string) {
+    setData((current) => ({ ...current, [field]: value }))
+    setErrors((current) => ({ ...current, [field]: undefined }))
+  }
+
+  function bind(field: keyof WalletData, required = true) {
+    return {
+      id: idOf(field),
+      value: data[field],
+      onChange: (
+        event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+      ) => update(field, event.target.value),
+      "aria-required": required || undefined,
+      "aria-invalid": errors[field] ? true : undefined,
+      "aria-describedby": errors[field] ? `${idOf(field)}-error` : undefined,
+    }
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const found = validate(data)
+    setErrors(found)
+
+    if (Object.keys(found).length > 0) {
+      return
+    }
+
+    onSave({
+      displayName: data.displayName.trim(),
+      nickname: data.nickname.trim(),
+      network: data.network,
+      profileName: data.profileName.trim(),
+      address: data.address.trim(),
+      secondaryAddress: data.secondaryAddress.trim(),
+      walletType: data.walletType,
+      referralCode: data.referralCode.trim(),
+      email: data.email.trim(),
+      ensName: data.ensName.trim(),
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} noValidate>
+      <div className="grid gap-x-7 gap-y-6 sm:grid-cols-2">
+        <Field
+          id={idOf("displayName")}
+          label="Nome de exibição"
+          required
+          error={errors.displayName}
+        >
+          <input type="text" className={inputClass} {...bind("displayName")} />
+        </Field>
+
+        <Field
+          id={idOf("nickname")}
+          label="Apelido da carteira"
+          required
+          error={errors.nickname}
+        >
+          <input type="text" className={inputClass} {...bind("nickname")} />
+        </Field>
+
+        <Field id={idOf("network")} label="Rede" required error={errors.network}>
+          <SelectBox>
+            <select
+              className={`${inputClass} appearance-none pr-9`}
+              {...bind("network")}
+            >
+              <option value="">Selecione uma rede</option>
+              <option value="Ethereum">Ethereum</option>
+              <option value="Polygon">Polygon</option>
+              <option value="Solana">Solana</option>
+            </select>
+          </SelectBox>
+        </Field>
+
+        <Field
+          id={idOf("profileName")}
+          label="Nome do perfil"
+          required
+          error={errors.profileName}
+        >
+          <input type="text" className={inputClass} {...bind("profileName")} />
+        </Field>
+
+        <Field
+          id={idOf("address")}
+          label="Endereço da carteira"
+          required
+          error={errors.address}
+        >
+          <input
+            type="text"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="Endereço 0x da carteira"
+            className={inputClass}
+            {...bind("address")}
+          />
+        </Field>
+
+        <div>
+          <label htmlFor={idOf("secondaryAddress")} className="mb-2 block h-5">
+            <span className="sr-only">ENS ou carteira secundária (opcional)</span>
+          </label>
+
+          <input
+            type="text"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="ENS ou carteira secundária (opcional)"
+            className={inputClass}
+            {...bind("secondaryAddress", false)}
+          />
+        </div>
+
+        <Field
+          id={idOf("walletType")}
+          label="Tipo de carteira"
+          required
+          error={errors.walletType}
+        >
+          <SelectBox>
+            <select
+              className={`${inputClass} appearance-none pr-9`}
+              {...bind("walletType")}
+            >
+              <option value="">Selecione uma carteira</option>
+              <option value="MetaMask">MetaMask</option>
+              <option value="Coinbase Wallet">Coinbase Wallet</option>
+              <option value="WalletConnect">WalletConnect</option>
+            </select>
+          </SelectBox>
+        </Field>
+
+        <Field
+          id={idOf("referralCode")}
+          label="Código de indicação"
+          required
+          error={errors.referralCode}
+        >
+          <input type="text" className={inputClass} {...bind("referralCode")} />
+        </Field>
+
+        <Field id={idOf("email")} label="E-mail" required error={errors.email}>
+          <input
+            type="email"
+            autoComplete="email"
+            className={inputClass}
+            {...bind("email")}
+          />
+        </Field>
+
+        <Field
+          id={idOf("ensName")}
+          label="Nome ENS"
+          required
+          error={errors.ensName}
+        >
+          <div className="flex gap-2.5">
+            <SelectBox>
+              <select
+                aria-label="Domínio ENS"
+                className={`${inputClass} w-[78px] appearance-none pr-6`}
+                defaultValue=".eth"
+              >
+                <option value=".eth">.eth</option>
+              </select>
+            </SelectBox>
+
+            <input type="text" className={inputClass} {...bind("ensName")} />
+          </div>
+        </Field>
+      </div>
+
+      <button
+        type="submit"
+        disabled={isSaving}
+        className="mt-8 bg-kurio-primary px-6 py-3 text-sm font-bold text-kurio-bg transition-colors hover:bg-[#e6a15f]"
+      >
+        {isSaving ? "Salvando..." : "Salvar carteira"}
+      </button>
+    </form>
+  )
 }
 
 function WalletsPage() {
   const navigate = useNavigate()
-
-  const {
-    user,
-    isAuthenticated,
-    isLoading,
-    logout,
-  } = useAuth()
-
-  const [wallets, setWallets] = useState<SavedWallet[]>([])
-  const [name, setName] = useState("")
-  const [address, setAddress] = useState("")
-  const [formOpen, setFormOpen] = useState(false)
-  const [error, setError] = useState("")
+  const queryClient = useQueryClient()
+  const { user, isAuthenticated, isLoading, logout } = useAuth()
+  const token = localStorage.getItem("jungle-auth-token")
+  const walletsKey = ["wallets", user?.id]
+  const walletsQuery = useQuery({
+    queryKey: walletsKey,
+    queryFn: ({ signal }) =>
+      token
+        ? getWallets(token, signal)
+        : Promise.reject(new Error("Sessão não encontrada.")),
+    enabled: Boolean(user && isAuthenticated && token),
+  })
+  const [walletDraft, setWalletDraft] = useState<{
+    userId: string
+    data: StoredWallets
+  } | null>(null)
+  const stored =
+    walletDraft && walletDraft.userId === user?.id
+      ? walletDraft.data
+      : walletsQuery.data ?? { primary: null, secondary: null }
   const [notice, setNotice] = useState("")
-  const [loadedUserId, setLoadedUserId] =
-    useState<string | null>(null)
+  const walletMutation = useMutation({
+    mutationFn: (nextWallets: StoredWallets) => {
+      if (!token) {
+        throw new Error("Sessão não encontrada.")
+      }
+
+      return saveWallets(nextWallets, token)
+    },
+    onSuccess: (savedWallets) => {
+      if (user) {
+        setWalletDraft({ userId: user.id, data: savedWallets })
+      }
+      setNotice("Carteiras salvas com sucesso.")
+      void queryClient.invalidateQueries({ queryKey: walletsKey })
+    },
+  })
+  const [secondaryOpen, setSecondaryOpen] = useState(false)
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       void navigate({
         to: "/login",
+        search: { returnTo: "/wallets" },
         replace: true,
       })
     }
   }, [isLoading, isAuthenticated, navigate])
 
-  useEffect(() => {
-    if (!user) {
-      setLoadedUserId(null)
-      setWallets([])
-      return
-    }
-
-    setWallets(readWallets(user.id))
-    setLoadedUserId(user.id)
-  }, [user])
-
-  function updateWallets(next: SavedWallet[]) {
-    if (!user) return
-
-    setWallets(next)
-
-    localStorage.setItem(
-      `kurio-wallets-${user.id}`,
-      JSON.stringify(next)
-    )
-  }
-
-  function handleAdd(
-    event: FormEvent<HTMLFormElement>
-  ) {
-    event.preventDefault()
-
-    setError("")
-    setNotice("")
-
-    const cleanName = name.trim()
-    const cleanAddress = address.trim()
-
-    if (
-      !cleanName ||
-      !ADDRESS_PATTERN.test(cleanAddress)
-    ) {
-      setError(
-        "Informe um nome e um endereço Ethereum válido (0x + 40 caracteres hexadecimais)."
-      )
-      return
-    }
-
-    if (
-      wallets.some(
-        (wallet) =>
-          wallet.address.toLowerCase() ===
-          cleanAddress.toLowerCase()
-      )
-    ) {
-      setError("Esta carteira já está cadastrada.")
-      return
-    }
-
-    updateWallets([
-      ...wallets,
-      {
-        id: crypto.randomUUID(),
-        name: cleanName,
-        address: cleanAddress,
-        primary: wallets.length === 0,
-      },
-    ])
-
-    setName("")
-    setAddress("")
-    setFormOpen(false)
-    setNotice("Carteira adicionada neste navegador.")
-  }
-
-  function handlePrimary(id: string) {
-    updateWallets(
-      wallets.map((wallet) => ({
-        ...wallet,
-        primary: wallet.id === id,
-      }))
-    )
-
-    setNotice("Carteira principal atualizada.")
-  }
-
-  function handleRemove(id: string) {
-    const next = wallets.filter(
-      (wallet) => wallet.id !== id
-    )
-
-    if (
-      next.length > 0 &&
-      !next.some((wallet) => wallet.primary)
-    ) {
-      next[0] = {
-        ...next[0],
-        primary: true,
-      }
-    }
-
-    updateWallets(next)
-    setNotice("Carteira removida.")
-  }
-
-  async function handleCopy(
-    addressToCopy: string
-  ) {
-    try {
-      await navigator.clipboard.writeText(
-        addressToCopy
-      )
-
-      setNotice("Endereço copiado.")
-    } catch {
-      setNotice(
-        "Não foi possível copiar o endereço."
-      )
-    }
+  function persist(next: StoredWallets) {
+    setNotice("Salvando carteiras...")
+    walletMutation.mutate(next)
   }
 
   async function handleLogout() {
@@ -223,7 +400,7 @@ function WalletsPage() {
     isLoading ||
     !isAuthenticated ||
     !user ||
-    loadedUserId !== user.id
+    walletsQuery.isPending
   ) {
     return (
       <div
@@ -235,313 +412,139 @@ function WalletsPage() {
     )
   }
 
+  if (walletsQuery.isError) {
+    return (
+      <section className="py-24 text-center">
+        <p role="alert" className="text-sm text-red-400">
+          Não foi possível carregar as carteiras.
+        </p>
+        <button
+          type="button"
+          onClick={() => void walletsQuery.refetch()}
+          className="mt-5 bg-kurio-primary px-5 py-3 text-sm font-bold text-kurio-bg"
+        >
+          Tentar novamente
+        </button>
+      </section>
+    )
+  }
+
+  const sameAsPrimary =
+    stored.primary !== null &&
+    stored.secondary !== null &&
+    JSON.stringify(stored.primary) === JSON.stringify(stored.secondary)
+
+  const showSecondaryForm =
+    !sameAsPrimary && (secondaryOpen || stored.secondary !== null)
+
+  function handleSameAsPrimary(checked: boolean) {
+    if (checked) {
+      if (!stored.primary) {
+        setNotice("Salve a carteira principal antes de copiá-la.")
+        return
+      }
+
+      persist({ ...stored, secondary: { ...stored.primary } })
+      return
+    }
+
+    persist({ ...stored, secondary: null })
+    setSecondaryOpen(true)
+    setNotice("")
+  }
+
   return (
-    <div className="py-10 sm:py-14">
-      <div className="mb-9 border-b border-[#493026] pb-7">
-        <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-kurio-primary">
-          Minha conta
-        </p>
+    <div className="grid gap-8 pb-10 pt-8 lg:grid-cols-[310px_minmax(0,1fr)] lg:gap-7">
+      <AccountSidebar active="wallets" onLogout={() => void handleLogout()} />
 
-        <h1 className="text-3xl font-black uppercase tracking-tight text-kurio-text sm:text-4xl">
-          Carteiras
-        </h1>
+      <div className="min-w-0 space-y-10">
+        <section aria-labelledby="primary-wallet-title">
+          <h1 id="primary-wallet-title" className="text-lg font-bold text-kurio-text">
+            Carteira principal
+          </h1>
 
-        <p className="mt-3 text-sm text-kurio-muted">
-          Gerencie os endereços de carteira associados ao seu perfil.
-        </p>
-      </div>
+          <p className="mb-8 mt-1 text-sm text-kurio-muted">
+            Estas carteiras ficam disponíveis no pagamento e para receber
+            NFTs comprados.
+          </p>
 
-      <div className="grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="self-start border border-[#493026] bg-kurio-surface p-4 lg:sticky lg:top-24">
-          <nav
-            aria-label="Navegação da conta"
-            className="flex flex-col gap-1"
-          >
-            <Link
-              to="/profile"
-              className="flex items-center gap-3 px-4 py-3 text-xs text-kurio-muted transition-colors hover:bg-kurio-bg hover:text-kurio-primary"
-            >
-              <UserRound size={17} />
-              Dados do perfil
-            </Link>
+          <WalletForm
+            key={`primary-${user.id}`}
+            idPrefix="primary"
+            initial={stored.primary ?? emptyWallet}
+            isSaving={walletMutation.isPending}
+            onSave={(data) => {
+              persist({ ...stored, primary: data })
+            }}
+          />
+        </section>
 
-            <Link
-              to="/wallets"
-              aria-current="page"
-              className="flex items-center gap-3 bg-kurio-primary px-4 py-3 text-xs font-bold text-kurio-bg"
-            >
-              <Wallet size={17} />
-              Carteiras
-            </Link>
-
-            <Link
-              to="/activity"
-              className="flex items-center gap-3 px-4 py-3 text-xs text-kurio-muted transition-colors hover:bg-kurio-bg hover:text-kurio-primary"
-            >
-              <Activity size={17} />
-              Atividade
-            </Link>
-
-            <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
-              <Heart size={17} />
-              Lista de interesse
-            </span>
-
-            <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
-              <Bookmark size={17} />
-              Ofertas
-            </span>
-
-            <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
-              <Download size={17} />
-              Arquivos baixados
-            </span>
-
-            <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
-              <HelpCircle size={17} />
-              Suporte
-            </span>
-
-            <div className="mt-3 border-t border-[#493026] pt-3">
-              <button
-                type="button"
-                onClick={() => void handleLogout()}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left text-xs text-kurio-text transition-colors hover:bg-kurio-bg hover:text-kurio-primary"
-              >
-                <LogOut size={17} />
-                Sair
-              </button>
-            </div>
-          </nav>
-        </aside>
-
-        <div className="min-w-0 space-y-6">
-          <section className="border border-[#493026] bg-kurio-surface p-5 sm:p-8">
-            <div className="flex flex-wrap items-start justify-between gap-5 border-b border-[#493026] pb-6">
-              <div>
-                <h2 className="text-lg font-bold uppercase text-kurio-text">
-                  Minhas carteiras
-                </h2>
-
-                <p className="mt-2 text-xs leading-6 text-kurio-muted">
-                  {wallets.length} carteira(s) cadastrada(s)
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setFormOpen((value) => !value)
-                  setError("")
-                  setNotice("")
-                }}
-                className="inline-flex items-center gap-2 bg-kurio-primary px-5 py-3 text-xs font-bold uppercase text-kurio-bg transition-colors hover:bg-[#e6a15f]"
-              >
-                {formOpen ? (
-                  <X size={16} />
-                ) : (
-                  <Plus size={16} />
-                )}
-
-                {formOpen
-                  ? "Cancelar"
-                  : "Adicionar carteira"}
-              </button>
-            </div>
-
-            {formOpen && (
-              <form
-                onSubmit={handleAdd}
-                className="mt-6 space-y-5 border border-[#704b35] bg-kurio-bg p-5"
-              >
-                <h3 className="text-sm font-bold uppercase text-kurio-text">
-                  Nova carteira
-                </h3>
-
-                <div>
-                  <label
-                    htmlFor="wallet-name"
-                    className="mb-2 block text-xs font-semibold text-kurio-text"
-                  >
-                    Nome da carteira
-                  </label>
-
-                  <input
-                    id="wallet-name"
-                    value={name}
-                    onChange={(event) =>
-                      setName(event.target.value)
-                    }
-                    maxLength={80}
-                    required
-                    placeholder="Ex.: Minha carteira principal"
-                    className="h-11 w-full border border-[#493026] bg-[#21130f] px-4 text-sm text-kurio-text outline-none placeholder:text-kurio-muted focus:border-kurio-primary"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="wallet-address"
-                    className="mb-2 block text-xs font-semibold text-kurio-text"
-                  >
-                    Endereço Ethereum
-                  </label>
-
-                  <input
-                    id="wallet-address"
-                    value={address}
-                    onChange={(event) =>
-                      setAddress(event.target.value)
-                    }
-                    required
-                    spellCheck={false}
-                    autoComplete="off"
-                    placeholder="0x..."
-                    className="h-11 w-full border border-[#493026] bg-[#21130f] px-4 font-mono text-xs text-kurio-text outline-none placeholder:text-kurio-muted focus:border-kurio-primary"
-                  />
-
-                  <p className="mt-2 text-[11px] leading-5 text-kurio-muted">
-                    Informe apenas um endereço público.
-                    Nunca digite sua chave privada ou frase de recuperação.
-                  </p>
-                </div>
-
-                {error && (
-                  <p
-                    role="alert"
-                    className="text-xs text-red-400"
-                  >
-                    {error}
-                  </p>
-                )}
-
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-2 bg-kurio-primary px-5 py-3 text-xs font-bold uppercase text-kurio-bg"
-                >
-                  <Check size={16} />
-                  Salvar carteira
-                </button>
-              </form>
-            )}
-
-            {notice && (
-              <p
-                role="status"
-                className="mt-5 text-xs text-emerald-400"
-              >
-                {notice}
-              </p>
-            )}
-
-            {wallets.length === 0 ? (
-              <div className="mt-7 flex flex-col items-center border border-dashed border-[#704b35] px-5 py-14 text-center">
-                <Wallet
-                  size={36}
-                  className="text-kurio-primary"
-                />
-
-                <h3 className="mt-5 text-sm font-bold uppercase text-kurio-text">
-                  Nenhuma carteira cadastrada
-                </h3>
-
-                <p className="mt-3 max-w-md text-xs leading-6 text-kurio-muted">
-                  Adicione um endereço público para organizar
-                  suas carteiras de demonstração.
-                </p>
-              </div>
-            ) : (
-              <div className="mt-7 space-y-4">
-                {wallets.map((wallet) => (
-                  <article
-                    key={wallet.id}
-                    className="border border-[#493026] bg-kurio-bg p-5"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center border border-[#704b35] bg-kurio-surface text-kurio-primary">
-                          <Wallet size={20} />
-                        </div>
-
-                        <div>
-                          <h3 className="break-all text-sm font-bold text-kurio-text">
-                            {wallet.name}
-                          </h3>
-
-                          {wallet.primary && (
-                            <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase text-kurio-primary">
-                              <Star size={12} />
-                              Principal
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <span className="inline-flex items-center gap-2 text-[10px] uppercase text-kurio-muted">
-                        <ShieldCheck size={15} />
-                        Endereço salvo
-                      </span>
-                    </div>
-
-                    <p className="mt-5 break-all border border-[#493026] bg-kurio-surface p-3 font-mono text-xs leading-6 text-kurio-muted">
-                      {wallet.address}
-                    </p>
-
-                    <div className="mt-5 flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void handleCopy(wallet.address)
-                        }
-                        className="inline-flex items-center gap-2 border border-[#704b35] px-3 py-2 text-xs text-kurio-text transition-colors hover:border-kurio-primary"
-                      >
-                        <Copy size={14} />
-                        Copiar endereço
-                      </button>
-
-                      {!wallet.primary && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handlePrimary(wallet.id)
-                          }
-                          className="inline-flex items-center gap-2 border border-[#704b35] px-3 py-2 text-xs text-kurio-text transition-colors hover:border-kurio-primary"
-                        >
-                          <Star size={14} />
-                          Definir principal
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleRemove(wallet.id)
-                        }
-                        className="inline-flex items-center gap-2 border border-[#493026] px-3 py-2 text-xs text-red-400 transition-colors hover:border-red-500"
-                      >
-                        <Trash2 size={14} />
-                        Remover
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="border border-[#493026] bg-kurio-surface p-5 sm:p-8">
-            <h2 className="text-sm font-bold uppercase text-kurio-text">
-              Sobre esta funcionalidade
+        <section aria-labelledby="secondary-wallet-title">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="secondary-wallet-title" className="text-lg font-bold text-kurio-text">
+              Carteira secundária
             </h2>
 
-            <p className="mt-3 text-xs leading-6 text-kurio-muted">
-              Esta é uma demonstração de gerenciamento de
-              endereços públicos. Os dados ficam somente neste
-              navegador. Nenhuma carteira é conectada ou verificada,
-              e nenhuma transação blockchain é realizada.
+            <div className="flex items-center gap-4 text-sm">
+              <label className="flex cursor-pointer items-center gap-2 text-kurio-text">
+                <input
+                  type="checkbox"
+                  checked={sameAsPrimary}
+                  onChange={(event) => handleSameAsPrimary(event.target.checked)}
+                  className="h-4 w-4 appearance-none rounded-full border-2 border-kurio-primary checked:bg-kurio-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kurio-primary"
+                />
+                Igual à carteira principal
+              </label>
+
+              {!showSecondaryForm && !sameAsPrimary && (
+                <button
+                  type="button"
+                  onClick={() => setSecondaryOpen(true)}
+                  className="font-bold text-kurio-primary hover:text-[#e6a15f]"
+                >
+                  Adicionar
+                </button>
+              )}
+            </div>
+          </div>
+
+          {showSecondaryForm ? (
+            <div className="mt-6">
+              <WalletForm
+                key={`secondary-${user.id}`}
+                idPrefix="secondary"
+                initial={stored.secondary ?? emptyWallet}
+                isSaving={walletMutation.isPending}
+                onSave={(data) => {
+                  persist({ ...stored, secondary: data })
+                }}
+              />
+            </div>
+          ) : (
+            <p className="mt-1 text-sm text-kurio-muted">
+              {sameAsPrimary
+                ? "A carteira secundária usa os mesmos dados da principal."
+                : "Você ainda não adicionou uma carteira secundária."}
             </p>
-          </section>
-        </div>
+          )}
+        </section>
+
+        {walletMutation.isError && (
+          <p role="alert" className="text-sm text-red-400">
+            {isAxiosError<{ message?: string }>(walletMutation.error)
+              ? walletMutation.error.response?.data?.message ??
+                "Não foi possível salvar as carteiras."
+              : "Não foi possível salvar as carteiras."}
+          </p>
+        )}
+
+        {notice && !walletMutation.isError && (
+          <p role="status" className="text-sm text-emerald-400">
+            {walletMutation.isPending
+              ? notice
+              : "Carteiras salvas com sucesso."}
+          </p>
+        )}
       </div>
     </div>
   )

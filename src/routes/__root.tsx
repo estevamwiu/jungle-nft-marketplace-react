@@ -1,5 +1,5 @@
-
 import { useState } from "react"
+
 import {
   createRootRoute,
   Link,
@@ -7,6 +7,7 @@ import {
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router"
+
 import {
   Menu,
   X,
@@ -21,6 +22,7 @@ import { useCart } from "@/features/cart/hooks/use.cart"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { Footer } from "@/components/layout/Footer"
 import { HomePage } from "@/components/home/HomePage"
+import { SocketConnection } from "@/features/realtime/components/SocketConnection"
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -29,16 +31,40 @@ export const Route = createRootRoute({
 function RootLayout() {
   const { totalItems } = useCart()
   const { user, isAuthenticated, isLoading, logout } = useAuth()
+
   const navigate = useNavigate()
 
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
 
+  const hash = useRouterState({
+    select: (state) => state.location.hash,
+  })
+
   const [menuOpen, setMenuOpen] = useState(false)
 
   const isAuthModal =
     pathname === "/login" || pathname === "/register"
+
+  const isMarket =
+    pathname.startsWith("/cart") ||
+    pathname.startsWith("/checkout") ||
+    pathname.startsWith("/nft") ||
+    (pathname === "/" && hash === "marketplace")
+
+  const navItem =
+    "flex h-full items-center border-b-2 text-sm transition-colors hover:text-kurio-primary"
+
+  const navState = (active: boolean) =>
+    active
+      ? "border-kurio-primary font-bold text-kurio-primary"
+      : "border-transparent text-kurio-text"
+
+  const mobileNavState = (active: boolean) =>
+    active
+      ? "border-l-2 border-kurio-primary pl-3 font-bold text-kurio-primary"
+      : "border-l-2 border-transparent pl-3 text-kurio-text"
 
   function closeMenu() {
     setMenuOpen(false)
@@ -61,51 +87,52 @@ function RootLayout() {
 
   return (
     <div className="min-h-screen bg-kurio-bg text-kurio-text">
+      <SocketConnection />
+
       <header className="sticky top-0 z-50 border-b border-[#493026] bg-kurio-bg/95 backdrop-blur-md">
-        <nav className="kurio-container flex h-18 items-center justify-between gap-4">
+        <nav className="kurio-container relative flex h-18 items-center justify-between gap-4">
           <Link
             to="/"
             onClick={closeMenu}
-            className="text-lg font-bold tracking-[0.18em] text-kurio-text"
+            className="shrink-0 text-lg font-bold tracking-[0.18em] text-kurio-text"
           >
             KURIO
           </Link>
 
-          <div className="hidden h-full items-center gap-8 md:flex">
+          <div className="hidden h-full items-center gap-8 md:absolute md:left-1/2 md:flex md:-translate-x-1/2">
             <Link
               to="/"
-              activeProps={{
-                className: "text-kurio-primary",
-              }}
-              className="flex h-full items-center border-b-2 border-transparent text-sm transition-colors hover:text-kurio-primary"
+              onClick={closeMenu}
+              className={`${navItem} ${navState(!isMarket)}`}
             >
               Início
             </Link>
 
-            <button
-              type="button"
-              onClick={goToMarketplace}
-              className="text-sm text-kurio-text transition-colors hover:text-kurio-primary"
+            <Link
+              to="/"
+              hash="marketplace"
+              onClick={closeMenu}
+              className={`${navItem} ${navState(isMarket)}`}
             >
               Mercado
-            </button>
+            </Link>
 
             <span
               title="Página em desenvolvimento"
-              className="cursor-not-allowed text-sm text-kurio-muted"
+              className="flex h-full cursor-not-allowed items-center text-sm text-kurio-muted"
             >
               Criadores
             </span>
 
             <span
               title="Página em desenvolvimento"
-              className="cursor-not-allowed text-sm text-kurio-muted"
+              className="flex h-full cursor-not-allowed items-center text-sm text-kurio-muted"
             >
               Aprenda
             </span>
           </div>
 
-          <div className="hidden items-center gap-5 md:flex">
+          <div className="ml-auto hidden items-center gap-5 md:flex">
             <button
               type="button"
               onClick={goToMarketplace}
@@ -140,6 +167,7 @@ function RootLayout() {
                   className="flex max-w-44 items-center gap-2 text-xs text-kurio-text transition-colors hover:text-kurio-primary"
                 >
                   <UserRound size={17} />
+
                   <span className="truncate">
                     Olá, {user.name}
                   </span>
@@ -202,24 +230,25 @@ function RootLayout() {
               <Link
                 to="/"
                 onClick={closeMenu}
-                className="text-sm hover:text-kurio-primary"
+                className={`text-sm transition-colors hover:text-kurio-primary ${mobileNavState(!isMarket)}`}
               >
                 Início
               </Link>
 
-              <button
-                type="button"
-                onClick={goToMarketplace}
-                className="text-left text-sm hover:text-kurio-primary"
+              <Link
+                to="/"
+                hash="marketplace"
+                onClick={closeMenu}
+                className={`text-sm transition-colors hover:text-kurio-primary ${mobileNavState(isMarket)}`}
               >
                 Mercado
-              </button>
+              </Link>
 
-              <span className="text-sm text-kurio-muted">
+              <span className="pl-3 text-sm text-kurio-muted">
                 Criadores (em breve)
               </span>
 
-              <span className="text-sm text-kurio-muted">
+              <span className="pl-3 text-sm text-kurio-muted">
                 Aprenda (em breve)
               </span>
 
@@ -267,7 +296,15 @@ function RootLayout() {
       <main className="kurio-container min-h-[70vh]">
         {isAuthModal && (
           <div aria-hidden="true" inert>
-            <HomePage />
+            <HomePage
+              catalog={{
+                q: "",
+                category: "all",
+                sort: "default",
+                page: 1,
+              }}
+              onCatalogChange={() => {}}
+            />
           </div>
         )}
 

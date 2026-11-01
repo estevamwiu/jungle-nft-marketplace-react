@@ -1,25 +1,19 @@
 import { useEffect, useState } from "react"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import {
-  Activity,
-  Bookmark,
-  Download,
-  Heart,
-  HelpCircle,
-  LogOut,
   ShoppingBag,
-  UserRound,
-  Wallet,
   CalendarDays,
   Hash,
   CheckCircle2,
 } from "lucide-react"
 
 import { useAuth } from "@/features/auth/hooks/use-auth"
+import { AccountSidebar } from "@/components/account/AccountSidebar"
 import {
   getOrders,
   type SavedOrder,
 } from "@/features/activity/order-storage"
+import { formatEth, multiplyEth, sumEth } from "@/lib/money"
 
 export const Route = createFileRoute("/activity")({
   component: ActivityPage,
@@ -71,10 +65,7 @@ function ActivityPage() {
       ? orders
       : orders.filter((order) => order.status === filter)
 
-  const totalSpent = orders.reduce(
-    (sum, order) => sum + order.total,
-    0
-  )
+  const totalSpent = sumEth(orders.map((order) => order.total))
 
   const totalNFTs = orders.reduce(
     (sum, order) =>
@@ -102,69 +93,11 @@ function ActivityPage() {
         </p>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="self-start border border-[#493026] bg-kurio-surface p-4 lg:sticky lg:top-24">
-          <nav
-            aria-label="Navegação da conta"
-            className="flex flex-col gap-1"
-          >
-            <Link
-              to="/profile"
-              className="flex items-center gap-3 px-4 py-3 text-xs text-kurio-muted transition-colors hover:bg-kurio-bg hover:text-kurio-primary"
-            >
-              <UserRound size={17} />
-              Dados do perfil
-            </Link>
-
-            <Link
-              to="/wallets"
-              className="flex items-center gap-3 px-4 py-3 text-xs text-kurio-muted transition-colors hover:bg-kurio-bg hover:text-kurio-primary"
-            >
-              <Wallet size={17} />
-              Carteiras
-            </Link>
-
-            <Link
-              to="/activity"
-              aria-current="page"
-              className="flex items-center gap-3 bg-kurio-primary px-4 py-3 text-xs font-bold text-kurio-bg"
-            >
-              <Activity size={17} />
-              Atividade
-            </Link>
-
-            <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
-              <Heart size={17} />
-              Lista de interesse
-            </span>
-
-            <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
-              <Bookmark size={17} />
-              Ofertas
-            </span>
-
-            <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
-              <Download size={17} />
-              Arquivos baixados
-            </span>
-
-            <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
-              <HelpCircle size={17} />
-              Suporte
-            </span>
-
-            <div className="mt-3 border-t border-[#493026] pt-3">
-              <button
-                type="button"
-                onClick={() => void handleLogout()}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left text-xs text-kurio-text transition-colors hover:bg-kurio-bg hover:text-kurio-primary"
-              >
-                <LogOut size={17} />
-                Sair
-              </button>
-            </div>
-          </nav>
-        </aside>
+      <div className="grid gap-8 lg:grid-cols-[310px_minmax(0,1fr)]">
+        <AccountSidebar
+          active="activity"
+          onLogout={() => void handleLogout()}
+        />
 
         <div className="min-w-0 space-y-6">
           <div className="grid gap-4 sm:grid-cols-3">
@@ -194,7 +127,7 @@ function ActivityPage() {
               </p>
 
               <p className="mt-3 text-2xl font-black text-kurio-primary">
-                {totalSpent.toFixed(2)} ETH
+                {formatEth(totalSpent)} ETH
               </p>
             </div>
           </div>
@@ -309,9 +242,9 @@ function ActivityPage() {
                           </div>
 
                           <p className="shrink-0 text-xs font-bold text-kurio-primary">
-                            {(
-                              item.price * item.quantity
-                            ).toFixed(2)}{" "}
+                            {formatEth(
+                              multiplyEth(item.price, item.quantity)
+                            )}{" "}
                             ETH
                           </p>
                         </div>
@@ -324,7 +257,7 @@ function ActivityPage() {
                       </span>
 
                       <span className="text-kurio-primary">
-                        {order.total.toFixed(2)} ETH
+                        {formatEth(order.total)} ETH
                       </span>
                     </div>
                   </article>

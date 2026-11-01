@@ -1,11 +1,17 @@
 
 import { useState, type FormEvent } from "react"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { isAxiosError } from "axios"
+import { useQuery } from "@tanstack/react-query"
 import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react"
 
 import { useCart } from "@/features/cart/hooks/use.cart"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { useNFTs } from "@/features/nft/hooks/use.nfts"
+import { getQuote } from "@/features/checkout/api/quote-api"
+import { formatEth, multiplyEth } from "@/lib/money"
+
+const COUPON_STORAGE_KEY = "kurio-applied-coupon"
 
 export const Route = createFileRoute("/cart")({
   component: CartPage,
@@ -21,32 +27,55 @@ function CartPage() {
     updateQuantity,
     clearCart,
     totalItems,
-    totalPrice,
   } = useCart()
 
   const { data: nfts = [] } = useNFTs()
 
-  const [promoCode, setPromoCode] = useState("")
+  const [appliedCoupon, setAppliedCoupon] = useState(
+    () => localStorage.getItem(COUPON_STORAGE_KEY) ?? ""
+  )
+  const [promoCode, setPromoCode] = useState(appliedCoupon)
   const [promoMessage, setPromoMessage] = useState("")
+  const quoteItems = items.map(({ nft, quantity }) => ({
+    nftId: nft.id,
+    quantity,
+  }))
+  const quoteQuery = useQuery({
+    queryKey: ["quote", quoteItems, appliedCoupon],
+    queryFn: ({ signal }) =>
+      getQuote(quoteItems, appliedCoupon, signal),
+    enabled: quoteItems.length > 0,
+    retry: false,
+  })
+  const quote = quoteQuery.data
+  const quoteErrorMessage = quoteQuery.isError
+    ? isAxiosError<{ message?: string }>(quoteQuery.error)
+      ? quoteQuery.error.response?.data?.message ??
+        "Não foi possível calcular a cotação."
+      : "Não foi possível calcular a cotação."
+    : null
 
   const relatedNFTs = nfts
     .filter((nft) => !items.some((item) => item.nft.id === nft.id))
     .slice(0, 5)
 
   function handleCheckout() {
-    if (items.length === 0) {
+    if (items.length === 0 || !quote || quoteQuery.isFetching) {
       return
     }
 
     if (!isAuthenticated) {
-      void navigate({ to: "/login" })
+      void navigate({
+        to: "/login",
+        search: { returnTo: "/cart" },
+      })
       return
     }
 
     void navigate({ to: "/checkout" })
   }
 
-  function handlePromoSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handlePromoSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     if (!promoCode.trim()) {
@@ -54,9 +83,30 @@ function CartPage() {
       return
     }
 
-    setPromoMessage(
-      "Nenhuma promoção está disponível no momento."
-    )
+    try {
+      const newQuote = await getQuote(quoteItems, promoCode.trim())
+      const coupon = newQuote.couponCode ?? ""
+      localStorage.setItem(COUPON_STORAGE_KEY, coupon)
+      setAppliedCoupon(coupon)
+      setPromoCode(coupon)
+      setPromoMessage(
+        coupon
+          ? `Cupom ${coupon} aplicado com sucesso.`
+          : "Cotação atualizada sem cupom."
+      )
+    } catch (error: unknown) {
+      const message = isAxiosError<{ message?: string }>(error)
+        ? error.response?.data?.message
+        : undefined
+      setPromoMessage(message ?? "Não foi possível validar o cupom.")
+    }
+  }
+
+  function handleRemoveCoupon() {
+    localStorage.removeItem(COUPON_STORAGE_KEY)
+    setAppliedCoupon("")
+    setPromoCode("")
+    setPromoMessage("Cupom removido.")
   }
 
   return (
@@ -155,6 +205,9 @@ function CartPage() {
                         <p className="mt-2 text-[11px] text-kurio-muted">
                           ID do token: #{nft.id.padStart(4, "0")}
                         </p>
+                        <p className="mt-1 text-[11px] text-kurio-muted">
+                          {nft.availableQuantity} edição(ões) disponíveis
+                        </p>
                       </div>
                     </div>
 
@@ -164,7 +217,7 @@ function CartPage() {
                       </span>
 
                       <span className="text-sm font-bold text-kurio-primary">
-                        {nft.price.toFixed(2)} ETH
+                        {formatEth(nft.price)} ETH
                       </span>
                     </div>
 
@@ -195,6 +248,10 @@ function CartPage() {
                           onClick={() =>
                             updateQuantity(nft.id, quantity + 1)
                           }
+                          disabled={
+                            !nft.available ||
+                            quantity >= nft.availableQuantity
+                          }
                           aria-label={`Aumentar quantidade de ${nft.name}`}
                           className="flex h-7 w-7 items-center justify-center rounded-full bg-kurio-primary text-kurio-bg transition-opacity hover:opacity-85"
                         >
@@ -209,7 +266,7 @@ function CartPage() {
                       </span>
 
                       <span className="text-sm font-bold text-kurio-primary">
-                        {(nft.price * quantity).toFixed(2)} ETH
+                        {formatEth(multiplyEth(nft.price, quantity))} ETH
                       </span>
                     </div>
 
@@ -252,7 +309,7 @@ function CartPage() {
                 </h3>
 
                 <form
-                  onSubmit={handlePromoSubmit}
+                  onSubmit={(event) => void handlePromoSubmit(event)}
                   className="flex"
                 >
                   <input
@@ -269,11 +326,26 @@ function CartPage() {
 
                   <button
                     type="submit"
+                    disabled={items.length === 0}
                     className="bg-kurio-primary px-4 py-3 text-xs font-bold text-kurio-bg transition-colors hover:bg-[#e6a15f]"
                   >
                     Aplicar
                   </button>
                 </form>
+
+                <p className="mt-2 text-[10px] text-kurio-muted">
+                  Cupons demonstrativos: JUNGLE10 (10%) e WELCOME5 (5%).
+                </p>
+
+                {appliedCoupon && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    className="mt-2 text-xs text-kurio-primary underline"
+                  >
+                    Remover cupom {appliedCoupon}
+                  </button>
+                )}
 
                 {promoMessage && (
                   <p
@@ -283,7 +355,22 @@ function CartPage() {
                     {promoMessage}
                   </p>
                 )}
+                {quoteErrorMessage && (
+                  <p role="alert" className="mt-2 text-xs text-red-400">
+                    {quoteErrorMessage} Revise os itens e tente novamente.
+                  </p>
+                )}
               </div>
+
+              {quote && (
+                <p className="mt-3 text-right text-[10px] text-kurio-muted">
+                  Cotação válida até{" "}
+                  {new Date(quote.expiresAt).toLocaleTimeString("pt-BR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              )}
 
               <div className="space-y-4 text-sm">
                 <div className="flex items-center justify-between gap-4">
@@ -292,17 +379,23 @@ function CartPage() {
                   </span>
 
                   <span className="text-kurio-text">
-                    {totalPrice.toFixed(2)} ETH
+                    {quote
+                      ? `${formatEth(quote.subtotal)} ETH`
+                      : quoteQuery.isFetching
+                        ? "Calculando..."
+                        : "—"}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-kurio-text">
-                    Desconto do lançamento
+                    Desconto{quote?.couponCode ? ` (${quote.couponCode})` : ""}
                   </span>
 
-                  <span className="text-kurio-muted">
-                    (-) 0.00 ETH
+                  <span className="text-kurio-text">
+                    {quote
+                      ? `-${formatEth(quote.discount)} ETH`
+                      : "—"}
                   </span>
                 </div>
 
@@ -311,15 +404,13 @@ function CartPage() {
                     Taxa de rede
                   </span>
 
-                  <span className="text-kurio-muted">
-                    A calcular
+                  <span className="text-kurio-text">
+                    {quote
+                      ? `${formatEth(quote.networkFee)} ETH`
+                      : "—"}
                   </span>
                 </div>
               </div>
-
-              <p className="mt-2 text-right text-[10px] text-kurio-primary">
-                Taxa não simulada neste checkout
-              </p>
 
               <div className="mt-6 flex items-center justify-between gap-4 border-t border-[#493026] pt-5">
                 <span className="text-sm font-bold text-kurio-text">
@@ -327,14 +418,23 @@ function CartPage() {
                 </span>
 
                 <span className="text-lg font-black text-kurio-primary">
-                  {totalPrice.toFixed(2)} ETH
+                  {quote
+                    ? `${formatEth(quote.total)} ETH`
+                    : quoteQuery.isFetching
+                      ? "Calculando..."
+                      : "—"}
                 </span>
               </div>
 
               <button
                 type="button"
                 onClick={handleCheckout}
-                className="mt-6 w-full rounded bg-kurio-primary px-5 py-4 text-sm font-bold text-kurio-bg transition-colors hover:bg-[#e6a15f]"
+                disabled={
+                  !quote ||
+                  quoteQuery.isFetching ||
+                  quoteQuery.isError
+                }
+                className="mt-6 w-full rounded bg-kurio-primary px-5 py-4 text-sm font-bold text-kurio-bg transition-colors hover:bg-[#e6a15f] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Conectar e finalizar
               </button>
@@ -383,7 +483,7 @@ function CartPage() {
                     </h3>
 
                     <p className="mt-1 text-sm font-bold text-kurio-primary">
-                      {nft.price.toFixed(2)} ETH
+                      {formatEth(nft.price)} ETH
                     </p>
                   </Link>
                 ))}

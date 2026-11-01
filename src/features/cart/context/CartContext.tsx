@@ -2,6 +2,7 @@
 import {
   createContext,
   useEffect,
+  useCallback,
   useReducer,
   type ReactNode,
 } from "react"
@@ -12,15 +13,26 @@ import type {
   CartItem,
   CartState,
 } from "../types"
+import {
+  isEthAmount,
+  multiplyEth,
+  sumEth,
+} from "@/lib/money"
 
 interface CartContextValue {
   items: CartItem[]
   addItem: (nft: NFT) => void
+  updateNFT: (
+    nft: Pick<
+      NFT,
+      "id" | "price" | "available" | "availableQuantity"
+    >
+  ) => void
   removeItem: (id: string) => void
   updateQuantity: (id: string, quantity: number) => void
   clearCart: () => void
   totalItems: number
-  totalPrice: number
+  totalPrice: string
 }
 
 export const CartContext =
@@ -46,18 +58,79 @@ function loadCart(): CartState {
       "items" in parsed &&
       Array.isArray(parsed.items)
     ) {
-      return {
-        items: parsed.items.filter(
-          (item): item is CartItem =>
-            typeof item === "object" &&
-            item !== null &&
-            typeof item.quantity === "number" &&
-            Number.isInteger(item.quantity) &&
-            item.quantity > 0 &&
-            typeof item.nft?.id === "string" &&
-            typeof item.nft?.price === "number"
-        ),
+      const items: CartItem[] = []
+
+      for (const item of parsed.items) {
+        if (
+          typeof item !== "object" ||
+          item === null ||
+          !("quantity" in item) ||
+          typeof item.quantity !== "number" ||
+          !Number.isSafeInteger(item.quantity) ||
+          item.quantity < 1 ||
+          !("nft" in item) ||
+          typeof item.nft !== "object" ||
+          item.nft === null
+        ) {
+          continue
+        }
+
+        const nft = item.nft
+        const price =
+          "price" in nft && typeof nft.price === "number"
+            ? String(nft.price)
+            : "price" in nft
+              ? nft.price
+              : null
+        const availableQuantity =
+          !("availableQuantity" in nft)
+            ? "available" in nft && nft.available
+              ? 5
+              : 0
+            : typeof nft.availableQuantity === "number" &&
+                Number.isSafeInteger(nft.availableQuantity) &&
+                nft.availableQuantity >= 0
+              ? nft.availableQuantity
+              : null
+
+        if (
+          !("id" in nft) ||
+          typeof nft.id !== "string" ||
+          !("name" in nft) ||
+          typeof nft.name !== "string" ||
+          !("description" in nft) ||
+          typeof nft.description !== "string" ||
+          !("image" in nft) ||
+          typeof nft.image !== "string" ||
+          !("creator" in nft) ||
+          typeof nft.creator !== "string" ||
+          !("category" in nft) ||
+          typeof nft.category !== "string" ||
+          !("available" in nft) ||
+          typeof nft.available !== "boolean" ||
+          availableQuantity === null ||
+          !isEthAmount(price)
+        ) {
+          continue
+        }
+
+        items.push({
+          nft: {
+            id: nft.id,
+            name: nft.name,
+            description: nft.description,
+            image: nft.image,
+            price,
+            creator: nft.creator,
+            category: nft.category,
+            available: nft.available,
+            availableQuantity,
+          },
+          quantity: item.quantity,
+        })
       }
+
+      return { items }
     }
 
     return initialState
@@ -72,13 +145,25 @@ function cartReducer(
 ): CartState {
   switch (action.type) {
     case "ADD_ITEM": {
-      if (!action.payload.available) return state
+      if (
+        !action.payload.available ||
+        action.payload.availableQuantity < 1
+      ) {
+        return state
+      }
 
       const existingItem = state.items.find(
         (item) => item.nft.id === action.payload.id
       )
 
       if (existingItem) {
+        if (
+          existingItem.quantity >=
+          action.payload.availableQuantity
+        ) {
+          return state
+        }
+
         return {
           items: state.items.map((item) =>
             item.nft.id === action.payload.id
@@ -103,21 +188,60 @@ function cartReducer(
         ),
       }
 
-    case "UPDATE_QUANTITY":
+    case "UPDATE_QUANTITY": {
       if (
-        !Number.isInteger(action.payload.quantity) ||
+        !Number.isSafeInteger(action.payload.quantity) ||
         action.payload.quantity < 1
       ) {
         return state
       }
 
+      const currentItem = state.items.find(
+        (item) => item.nft.id === action.payload.id
+      )
+
+      if (!currentItem || currentItem.nft.availableQuantity < 1) {
+        return state
+      }
+
+      const quantity = Math.min(
+        action.payload.quantity,
+        currentItem.nft.availableQuantity
+      )
+
       return {
         items: state.items.map((item) =>
           item.nft.id === action.payload.id
-            ? { ...item, quantity: action.payload.quantity }
+            ? { ...item, quantity }
             : item
         ),
       }
+    }
+
+    case "UPDATE_NFT": {
+      return {
+        items: state.items.map((item) =>
+          item.nft.id === action.payload.id
+            ? {
+                ...item,
+                nft: {
+                  ...item.nft,
+                  price: action.payload.price,
+                  available: action.payload.available,
+                  availableQuantity: action.payload.availableQuantity,
+                },
+                quantity:
+                  action.payload.availableQuantity > 0
+                    ? Math.min(
+                        item.quantity,
+                        action.payload.availableQuantity
+                      )
+                    : item.quantity,
+              }
+            : item
+        ),
+      }
+    }
 
     case "CLEAR_CART":
       return initialState
@@ -150,14 +274,25 @@ export function CartProvider({
     0
   )
 
-  const totalPrice = state.items.reduce(
-    (total, item) =>
-      total + item.nft.price * item.quantity,
-    0
+  const totalPrice = sumEth(
+    state.items.map((item) =>
+      multiplyEth(item.nft.price, item.quantity)
+    )
   )
 
   const addItem = (nft: NFT) =>
     dispatch({ type: "ADD_ITEM", payload: nft })
+
+  const updateNFT = useCallback(
+    (
+      nft: Pick<
+        NFT,
+        "id" | "price" | "available" | "availableQuantity"
+      >
+    ) =>
+      dispatch({ type: "UPDATE_NFT", payload: nft }),
+    []
+  )
 
   const removeItem = (id: string) =>
     dispatch({ type: "REMOVE_ITEM", payload: id })
@@ -171,14 +306,17 @@ export function CartProvider({
       payload: { id, quantity },
     })
 
-  const clearCart = () =>
-    dispatch({ type: "CLEAR_CART" })
+  const clearCart = useCallback(
+    () => dispatch({ type: "CLEAR_CART" }),
+    []
+  )
 
   return (
     <CartContext.Provider
       value={{
         items: state.items,
         addItem,
+        updateNFT,
         removeItem,
         updateQuantity,
         clearCart,

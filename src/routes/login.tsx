@@ -3,13 +3,26 @@ import { useState, type FormEvent } from "react"
 import {
   createFileRoute,
   useNavigate,
+  useRouter,
 } from "@tanstack/react-router"
 import { Eye, EyeOff } from "lucide-react"
 
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { AuthModal } from "@/features/auth/components/Auth.Modal"
 
+interface LoginSearch {
+  returnTo?: string
+}
+
 export const Route = createFileRoute("/login")({
+  validateSearch: (search: Record<string, unknown>): LoginSearch => ({
+    returnTo:
+      typeof search.returnTo === "string" &&
+      search.returnTo.startsWith("/") &&
+      !search.returnTo.startsWith("//")
+        ? search.returnTo.slice(0, 512)
+        : undefined,
+  }),
   component: LoginPage,
 })
 
@@ -18,6 +31,8 @@ const inputClass =
 
 function LoginPage() {
   const navigate = useNavigate()
+  const router = useRouter()
+  const { returnTo } = Route.useSearch()
   const { login, isAuthenticated, isLoading } = useAuth()
 
   const [email, setEmail] = useState("")
@@ -50,7 +65,7 @@ function LoginPage() {
         return
       }
 
-      await navigate({ to: "/" })
+      router.history.push(returnTo ?? "/")
     } catch {
       setError("Não foi possível realizar o login. Tente novamente.")
     } finally {

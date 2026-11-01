@@ -4,41 +4,35 @@ import {
   type FormEvent,
   type ChangeEvent,
 } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { isAxiosError } from "axios"
 
 import {
   createFileRoute,
-  Link,
   useNavigate,
 } from "@tanstack/react-router"
 
 import {
-  Activity,
-  Bookmark,
-  Download,
   Eye,
   EyeOff,
-  Heart,
-  HelpCircle,
-  LogOut,
   UserRound,
-  Wallet,
   ImagePlus,
   Trash2,
   Save,
 } from "lucide-react"
 
 import { useAuth } from "@/features/auth/hooks/use-auth"
+import { AccountSidebar } from "@/components/account/AccountSidebar"
+import {
+  changePassword,
+  getProfile,
+  saveProfile,
+} from "@/features/account/api/account-api"
+import type { ProfileData } from "@/features/account/types"
 
 export const Route = createFileRoute("/profile")({
   component: ProfilePage,
 })
-
-interface ProfileData {
-  displayName: string
-  username: string
-  ensName: string
-  walletNickname: string
-}
 
 const inputClass =
   "h-11 w-full rounded border border-[#493026] bg-[#21130f] px-4 text-sm text-kurio-text outline-none transition-colors placeholder:text-kurio-muted focus:border-kurio-primary disabled:cursor-not-allowed disabled:opacity-60"
@@ -48,17 +42,49 @@ const labelClass =
 
 function ProfilePage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const { user, isAuthenticated, isLoading, logout } = useAuth()
-
-  const [profile, setProfile] = useState<ProfileData>({
-    displayName: "",
-    username: "",
-    ensName: "",
-    walletNickname: "",
+  const token = localStorage.getItem("jungle-auth-token")
+  const profileKey = ["profile", user?.id]
+  const profileQuery = useQuery({
+    queryKey: profileKey,
+    queryFn: ({ signal }) =>
+      token
+        ? getProfile(token, signal)
+        : Promise.reject(new Error("Sessão não encontrada.")),
+    enabled: Boolean(user && isAuthenticated && token),
   })
+  const [profileDraft, setProfileDraft] = useState<{
+    userId: string
+    data: ProfileData
+  } | null>(null)
+  const profile =
+    profileDraft && profileDraft.userId === user?.id
+      ? profileDraft.data
+      : profileQuery.data ?? {
+          displayName: user?.name ?? "",
+          username: "",
+          ensName: "",
+          walletNickname: "",
+          avatar: null,
+        }
+  const profileMutation = useMutation({
+    mutationFn: (nextProfile: ProfileData) => {
+      if (!token) {
+        throw new Error("Sessão não encontrada.")
+      }
 
-  const [avatar, setAvatar] = useState<string | null>(null)
+      return saveProfile(nextProfile, token)
+    },
+    onSuccess: (savedProfile) => {
+      if (user) {
+        setProfileDraft({ userId: user.id, data: savedProfile })
+      }
+      void queryClient.invalidateQueries({ queryKey: profileKey })
+    },
+  })
+  const [avatarError, setAvatarError] = useState("")
 
   const [showCurrentPassword, setShowCurrentPassword] =
     useState(false)
@@ -68,64 +94,54 @@ function ProfilePage() {
 
   const [showConfirmPassword, setShowConfirmPassword] =
     useState(false)
+  const [passwordValues, setPasswordValues] = useState({
+    current: "",
+    next: "",
+    confirmation: "",
+  })
+  const [passwordError, setPasswordError] = useState("")
+  const passwordMutation = useMutation({
+    mutationFn: () => {
+      if (!token) {
+        throw new Error("Sessão não encontrada.")
+      }
 
-  const [saved, setSaved] = useState(false)
+      return changePassword(
+        passwordValues.current,
+        passwordValues.next,
+        token
+      )
+    },
+    onSuccess: () => {
+      setPasswordValues({
+        current: "",
+        next: "",
+        confirmation: "",
+      })
+      setPasswordError("")
+    },
+  })
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       void navigate({
         to: "/login",
+        search: { returnTo: "/profile" },
         replace: true,
       })
     }
   }, [isAuthenticated, isLoading, navigate])
 
-  useEffect(() => {
-    if (!user) return
-
-    const storageKey = `kurio-profile-${user.id}`
-    const storedProfile = localStorage.getItem(storageKey)
-
-    if (storedProfile) {
-      try {
-        const parsed = JSON.parse(
-          storedProfile
-        ) as Partial<ProfileData>
-
-        setProfile({
-          displayName: parsed.displayName ?? user.name,
-          username: parsed.username ?? "",
-          ensName: parsed.ensName ?? "",
-          walletNickname: parsed.walletNickname ?? "",
-        })
-      } catch {
-        setProfile({
-          displayName: user.name,
-          username: "",
-          ensName: "",
-          walletNickname: "",
-        })
-      }
-    } else {
-      setProfile({
-        displayName: user.name,
-        username: "",
-        ensName: "",
-        walletNickname: "",
-      })
-    }
-  }, [user])
-
   function updateProfile(
     field: keyof ProfileData,
-    value: string
+    value: string | null
   ) {
-    setProfile((current) => ({
-      ...current,
-      [field]: value,
-    }))
-
-    setSaved(false)
+    if (!user) return
+    setProfileDraft({
+      userId: user.id,
+      data: { ...profile, [field]: value },
+    })
+    profileMutation.reset()
   }
 
   function handleSave(
@@ -133,19 +149,32 @@ function ProfilePage() {
   ) {
     event.preventDefault()
 
-    if (!user) return
+    profileMutation.mutate({
+      ...profile,
+      displayName: profile.displayName.trim(),
+      username: profile.username.trim(),
+      ensName: profile.ensName.trim(),
+      walletNickname: profile.walletNickname.trim(),
+    })
+  }
 
-    localStorage.setItem(
-      `kurio-profile-${user.id}`,
-      JSON.stringify({
-        displayName: profile.displayName.trim(),
-        username: profile.username.trim(),
-        ensName: profile.ensName.trim(),
-        walletNickname: profile.walletNickname.trim(),
-      })
-    )
+  function handlePasswordSubmit(
+    event: FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault()
 
-    setSaved(true)
+    if (passwordValues.next.length < 6) {
+      setPasswordError("A nova senha deve ter ao menos 6 caracteres.")
+      return
+    }
+
+    if (passwordValues.next !== passwordValues.confirmation) {
+      setPasswordError("A confirmação da senha não corresponde.")
+      return
+    }
+
+    setPasswordError("")
+    passwordMutation.mutate()
   }
 
   function handleAvatarChange(
@@ -156,30 +185,44 @@ function ProfilePage() {
     if (!file) return
 
     if (!file.type.startsWith("image/")) {
+      setAvatarError("Selecione um arquivo de imagem.")
       return
     }
 
     if (file.size > 2 * 1024 * 1024) {
+      setAvatarError("A imagem deve ter no máximo 2 MB.")
       return
     }
 
+    setAvatarError("")
     const reader = new FileReader()
 
     reader.onload = () => {
       if (typeof reader.result === "string") {
-        setAvatar(reader.result)
+        updateProfile("avatar", reader.result)
       }
+    }
+    reader.onerror = () => {
+      setAvatarError("Não foi possível ler a imagem selecionada.")
     }
 
     reader.readAsDataURL(file)
   }
 
   async function handleLogout() {
-    await logout()
-    await navigate({ to: "/" })
+    try {
+      await logout()
+    } finally {
+      await navigate({ to: "/" })
+    }
   }
 
-  if (isLoading || !isAuthenticated || !user) {
+  if (
+    isLoading ||
+    !isAuthenticated ||
+    !user ||
+    profileQuery.isPending
+  ) {
     return (
       <div
         role="status"
@@ -187,6 +230,23 @@ function ProfilePage() {
       >
         Verificando sessão...
       </div>
+    )
+  }
+
+  if (profileQuery.isError) {
+    return (
+      <section className="py-24 text-center">
+        <p role="alert" className="text-sm text-red-400">
+          Não foi possível carregar os dados do perfil.
+        </p>
+        <button
+          type="button"
+          onClick={() => void profileQuery.refetch()}
+          className="mt-5 bg-kurio-primary px-5 py-3 text-sm font-bold text-kurio-bg"
+        >
+          Tentar novamente
+        </button>
+      </section>
     )
   }
 
@@ -213,69 +273,11 @@ function ProfilePage() {
         </p>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="self-start border border-[#493026] bg-kurio-surface p-4 lg:sticky lg:top-24">
-          <nav
-            aria-label="Navegação da conta"
-            className="flex flex-col gap-1"
-          >
-            <Link
-              to="/profile"
-              aria-current="page"
-              className="flex items-center gap-3 bg-kurio-primary px-4 py-3 text-xs font-bold text-kurio-bg"
-            >
-              <UserRound size={17} />
-              Dados do perfil
-            </Link>
-
-            <Link
-              to="/wallets"
-              className="flex items-center gap-3 px-4 py-3 text-xs text-kurio-muted transition-colors hover:bg-kurio-bg hover:text-kurio-primary"
-            >
-              <Wallet size={17} />
-              Carteiras
-            </Link>
-
-            <Link
-              to="/activity"
-              className="flex items-center gap-3 px-4 py-3 text-xs text-kurio-muted transition-colors hover:bg-kurio-bg hover:text-kurio-primary"
-            >
-              <Activity size={17} />
-              Atividade
-            </Link>
-
-            <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
-              <Heart size={17} />
-              Lista de interesse
-            </span>
-
-            <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
-              <Bookmark size={17} />
-              Ofertas
-            </span>
-
-            <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
-              <Download size={17} />
-              Arquivos baixados
-            </span>
-
-            <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
-              <HelpCircle size={17} />
-              Suporte
-            </span>
-
-            <div className="mt-3 border-t border-[#493026] pt-3">
-              <button
-                type="button"
-                onClick={() => void handleLogout()}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left text-xs text-kurio-text transition-colors hover:bg-kurio-bg hover:text-kurio-primary"
-              >
-                <LogOut size={17} />
-                Sair
-              </button>
-            </div>
-          </nav>
-        </aside>
+      <div className="grid gap-8 lg:grid-cols-[310px_minmax(0,1fr)]">
+        <AccountSidebar
+          active="profile"
+          onLogout={() => void handleLogout()}
+        />
 
         <div className="min-w-0 space-y-8">
           <section className="border border-[#493026] bg-kurio-surface p-5 sm:p-8">
@@ -422,9 +424,9 @@ function ProfilePage() {
 
                   <div className="flex flex-wrap items-center gap-4">
                     <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#704b35] bg-[#35221a] text-lg font-bold text-kurio-primary">
-                      {avatar ? (
+                      {profile.avatar ? (
                         <img
-                          src={avatar}
+                          src={profile.avatar}
                           alt="Prévia do avatar"
                           className="h-full w-full object-cover"
                         />
@@ -448,8 +450,8 @@ function ProfilePage() {
 
                       <button
                         type="button"
-                        onClick={() => setAvatar(null)}
-                        disabled={!avatar}
+                        onClick={() => updateProfile("avatar", null)}
+                        disabled={!profile.avatar}
                         className="inline-flex items-center gap-2 border border-[#493026] px-3 py-2 text-xs text-kurio-muted transition-colors hover:text-kurio-primary disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Trash2 size={15} />
@@ -459,33 +461,51 @@ function ProfilePage() {
                   </div>
 
                   <p className="mt-2 text-[11px] text-kurio-muted">
-                    Prévia temporária. Imagem de até 2 MB.
+                    Imagem de até 2 MB, salva junto ao perfil.
                   </p>
+
+                  {avatarError && (
+                    <p role="alert" className="mt-2 text-xs text-red-400">
+                      {avatarError}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="mt-8 border-t border-[#493026] pt-6">
                 <p className="text-xs leading-6 text-kurio-muted">
-                  Os dados personalizados são salvos apenas neste
-                  navegador. A atualização da conta no servidor
-                  ainda não está disponível.
+                  Os dados são persistidos pela API simulada da conta.
                 </p>
 
-                {saved && (
+                {profileMutation.isError && (
+                  <p role="alert" className="mt-3 text-xs text-red-400">
+                    {isAxiosError<{ message?: string }>(
+                      profileMutation.error
+                    )
+                      ? profileMutation.error.response?.data?.message ??
+                        "Não foi possível salvar o perfil."
+                      : "Não foi possível salvar o perfil."}
+                  </p>
+                )}
+
+                {profileMutation.isSuccess && (
                   <p
                     role="status"
                     className="mt-3 text-xs text-emerald-400"
                   >
-                    Preferências salvas neste navegador.
+                    Perfil salvo com sucesso.
                   </p>
                 )}
 
                 <button
                   type="submit"
+                  disabled={profileMutation.isPending}
                   className="mt-5 inline-flex h-11 items-center justify-center gap-2 bg-kurio-primary px-7 text-xs font-bold uppercase tracking-wide text-kurio-bg transition-colors hover:bg-[#e6a15f]"
                 >
                   <Save size={16} />
-                  Salvar perfil
+                  {profileMutation.isPending
+                    ? "Salvando..."
+                    : "Salvar perfil"}
                 </button>
               </div>
             </form>
@@ -498,12 +518,12 @@ function ProfilePage() {
               </h2>
 
               <p className="mt-2 text-xs leading-6 text-kurio-muted">
-                A alteração de senha estará disponível quando
-                a API oferecer essa operação.
+                Use sua senha atual para definir uma nova senha.
               </p>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <form onSubmit={handlePasswordSubmit}>
+              <div className="grid gap-6 md:grid-cols-2">
               <div>
                 <label
                   htmlFor="current-password"
@@ -521,7 +541,15 @@ function ProfilePage() {
                         : "password"
                     }
                     placeholder="Digite sua senha atual"
-                    disabled
+                    autoComplete="current-password"
+                    required
+                    value={passwordValues.current}
+                    onChange={(event) =>
+                      setPasswordValues((current) => ({
+                        ...current,
+                        current: event.target.value,
+                      }))
+                    }
                     className={`${inputClass} pr-11`}
                   />
 
@@ -532,7 +560,6 @@ function ProfilePage() {
                         (value) => !value
                       )
                     }
-                    disabled
                     aria-label="Mostrar ou ocultar senha atual"
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-kurio-muted"
                   >
@@ -562,7 +589,16 @@ function ProfilePage() {
                         : "password"
                     }
                     placeholder="Digite sua nova senha"
-                    disabled
+                    autoComplete="new-password"
+                    minLength={6}
+                    required
+                    value={passwordValues.next}
+                    onChange={(event) =>
+                      setPasswordValues((current) => ({
+                        ...current,
+                        next: event.target.value,
+                      }))
+                    }
                     className={`${inputClass} pr-11`}
                   />
 
@@ -573,7 +609,6 @@ function ProfilePage() {
                         (value) => !value
                       )
                     }
-                    disabled
                     aria-label="Mostrar ou ocultar nova senha"
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-kurio-muted"
                   >
@@ -603,7 +638,16 @@ function ProfilePage() {
                         : "password"
                     }
                     placeholder="Confirme sua nova senha"
-                    disabled
+                    autoComplete="new-password"
+                    minLength={6}
+                    required
+                    value={passwordValues.confirmation}
+                    onChange={(event) =>
+                      setPasswordValues((current) => ({
+                        ...current,
+                        confirmation: event.target.value,
+                      }))
+                    }
                     className={`${inputClass} pr-11`}
                   />
 
@@ -614,7 +658,6 @@ function ProfilePage() {
                         (value) => !value
                       )
                     }
-                    disabled
                     aria-label="Mostrar ou ocultar confirmação de senha"
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-kurio-muted"
                   >
@@ -626,15 +669,41 @@ function ProfilePage() {
                   </button>
                 </div>
               </div>
-            </div>
+              </div>
 
-            <button
-              type="button"
-              disabled
-              className="mt-7 inline-flex h-11 cursor-not-allowed items-center justify-center bg-kurio-primary px-7 text-xs font-bold uppercase text-kurio-bg opacity-50"
-            >
-              Salvar nova senha
-            </button>
+              {passwordError && (
+                <p role="alert" className="mt-4 text-xs text-red-400">
+                  {passwordError}
+                </p>
+              )}
+
+              {passwordMutation.isError && (
+                <p role="alert" className="mt-4 text-xs text-red-400">
+                  {isAxiosError<{ message?: string }>(
+                    passwordMutation.error
+                  )
+                    ? passwordMutation.error.response?.data?.message ??
+                      "Não foi possível alterar a senha."
+                    : "Não foi possível alterar a senha."}
+                </p>
+              )}
+
+              {passwordMutation.isSuccess && (
+                <p role="status" className="mt-4 text-xs text-emerald-400">
+                  Senha alterada com sucesso.
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={passwordMutation.isPending}
+                className="mt-7 inline-flex h-11 items-center justify-center bg-kurio-primary px-7 text-xs font-bold uppercase text-kurio-bg disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {passwordMutation.isPending
+                  ? "Salvando..."
+                  : "Salvar nova senha"}
+              </button>
+            </form>
           </section>
         </div>
       </div>

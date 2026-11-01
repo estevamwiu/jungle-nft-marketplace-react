@@ -2,6 +2,7 @@
 import { useState } from "react"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { isAxiosError } from "axios"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Check,
   Heart,
@@ -14,6 +15,13 @@ import {
 import { useNFT } from "@/features/nft/hooks/use.nft"
 import { useNFTs } from "@/features/nft/hooks/use.nfts"
 import { useCart } from "@/features/cart/hooks/use.cart"
+import { useAuth } from "@/features/auth/hooks/use-auth"
+import {
+  addFavorite,
+  getFavorites,
+  removeFavorite,
+} from "@/features/nft/api/favorites-api"
+import { formatEth, multiplyEth } from "@/lib/money"
 
 export const Route = createFileRoute("/nft/$id")({
   component: NFTDetailsPage,
@@ -22,13 +30,66 @@ export const Route = createFileRoute("/nft/$id")({
 function NFTDetailsPage() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const { addItem } = useCart()
+  const { isAuthenticated, user } = useAuth()
   const [quantity, setQuantity] = useState(1)
   const [activeTab, setActiveTab] = useState<"details" | "reviews">("details")
-  const [isFavorite, setIsFavorite] = useState(false)
   const [imageExpanded, setImageExpanded] = useState(false)
   const [addedToCart, setAddedToCart] = useState(false)
+  const token = localStorage.getItem("jungle-auth-token")
+  const favoritesKey = ["favorites", user?.id]
+  const favoritesQuery = useQuery({
+    queryKey: favoritesKey,
+    queryFn: ({ signal }) =>
+      token
+        ? getFavorites(token, signal)
+        : Promise.reject(new Error("Sessão não encontrada.")),
+    enabled: Boolean(isAuthenticated && user && token),
+  })
+  const favoriteMutation = useMutation({
+    mutationFn: ({
+      nftId,
+      shouldAdd,
+    }: {
+      nftId: string
+      shouldAdd: boolean
+    }) => {
+      if (!token) {
+        throw new Error("Sessão não encontrada.")
+      }
+
+      return shouldAdd
+        ? addFavorite(nftId, token)
+        : removeFavorite(nftId, token)
+    },
+    onMutate: async ({ nftId, shouldAdd }) => {
+      await queryClient.cancelQueries({ queryKey: favoritesKey })
+      const previous =
+        queryClient.getQueryData<string[]>(favoritesKey)
+      queryClient.setQueryData<string[]>(favoritesKey, (current = []) =>
+        shouldAdd
+          ? [...new Set([...current, nftId])]
+          : current.filter((favoriteId) => favoriteId !== nftId)
+      )
+
+      return { previous }
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(favoritesKey, context.previous)
+      } else {
+        queryClient.removeQueries({
+          queryKey: favoritesKey,
+          exact: true,
+        })
+      }
+    },
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: favoritesKey }),
+  })
+  const isFavorite = favoritesQuery.data?.includes(id) ?? false
 
   const {
     data: nft,
@@ -102,14 +163,18 @@ function NFTDetailsPage() {
     })
     .slice(0, 5)
 
-  const totalPrice = nft.price * quantity
+  const safeQuantity = Math.min(
+    quantity,
+    Math.max(nft.availableQuantity, 1)
+  )
+  const totalPrice = multiplyEth(nft.price, safeQuantity)
 
   function handleAddToCart() {
-    if (!nft || !nft.available) {
+    if (!nft || !nft.available || nft.availableQuantity < 1) {
       return
     }
 
-    for (let index = 0; index < quantity; index++) {
+    for (let index = 0; index < safeQuantity; index++) {
       addItem(nft)
     }
 
@@ -117,13 +182,28 @@ function NFTDetailsPage() {
   }
 
     function handleBuy() {
-      if (!nft || !nft.available) {
+      if (!nft || !nft.available || nft.availableQuantity < 1) {
         return
       }
 
   handleAddToCart()
   void navigate({ to: "/cart" })
 }
+
+  function handleToggleFavorite() {
+    if (!isAuthenticated || !user) {
+      void navigate({
+        to: "/login",
+        search: { returnTo: `/nft/${encodeURIComponent(id)}` },
+      })
+      return
+    }
+
+    favoriteMutation.mutate({
+      nftId: id,
+      shouldAdd: !isFavorite,
+    })
+  }
 
   return (
     <div className="pb-16 pt-8 sm:pt-10">
@@ -209,7 +289,7 @@ function NFTDetailsPage() {
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-b border-[#493026] pb-5">
             <p className="text-2xl font-black text-kurio-primary">
-              {nft.price.toFixed(2)} ETH
+              {formatEth(nft.price)} ETH
             </p>
 
             <span
@@ -219,7 +299,9 @@ function NFTDetailsPage() {
                   : "text-red-400"
               }`}
             >
-              {nft.available ? "● Disponível" : "● Indisponível"}
+              {nft.available
+                ? `● ${nft.availableQuantity} edição(ões) disponíveis`
+                : "● Indisponível"}
             </span>
           </div>
 
@@ -266,13 +348,20 @@ function NFTDetailsPage() {
               </button>
 
               <span className="min-w-6 text-center text-base font-bold text-kurio-text">
-                {quantity}
+                {safeQuantity}
               </span>
 
               <button
                 type="button"
-                onClick={() => setQuantity((value) => value + 1)}
-                disabled={!nft.available}
+                onClick={() =>
+                  setQuantity((value) =>
+                    Math.min(value + 1, nft.availableQuantity)
+                  )
+                }
+                disabled={
+                  !nft.available ||
+                  quantity >= nft.availableQuantity
+                }
                 aria-label="Aumentar quantidade"
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-kurio-primary text-kurio-bg transition-opacity disabled:opacity-40"
               >
@@ -293,7 +382,10 @@ function NFTDetailsPage() {
 
               <button
                 type="button"
-                onClick={() => setIsFavorite((value) => !value)}
+                onClick={handleToggleFavorite}
+                disabled={
+                  favoritesQuery.isPending || favoriteMutation.isPending
+                }
                 aria-pressed={isFavorite}
                 className={`inline-flex items-center justify-center gap-2 rounded border px-4 py-3 text-xs font-bold transition-colors ${
                   isFavorite
@@ -310,11 +402,17 @@ function NFTDetailsPage() {
             </div>
           </div>
 
+          {favoriteMutation.isError && (
+            <p role="alert" className="mt-3 text-xs text-red-400">
+              Não foi possível atualizar o favorito. Tente novamente.
+            </p>
+          )}
+
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-[#493026] pb-5">
             <p className="text-xs text-kurio-muted">
               Total:{" "}
               <strong className="text-kurio-primary">
-                {totalPrice.toFixed(2)} ETH
+                {formatEth(totalPrice)} ETH
               </strong>
             </p>
 
@@ -474,7 +572,7 @@ function NFTDetailsPage() {
                 </h3>
 
                 <p className="mt-1 text-sm font-bold text-kurio-primary">
-                  {item.price.toFixed(2)} ETH
+                  {formatEth(item.price)} ETH
                 </p>
               </Link>
             ))}

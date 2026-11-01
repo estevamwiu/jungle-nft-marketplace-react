@@ -20,4 +20,11 @@ export type CartAction =
         quantity: number
       }
     }
+  | {
+      type: "UPDATE_NFT"
+      payload: Pick<
+        NFT,
+        "id" | "price" | "available" | "availableQuantity"
+      >
+    }
   | { type: "CLEAR_CART" }

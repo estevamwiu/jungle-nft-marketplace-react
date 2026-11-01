@@ -1,63 +1,103 @@
+import { useEffect, useMemo, useState } from "react"
+import { Link } from "@tanstack/react-router"
+import { ChevronDown, ChevronRight, Search } from "lucide-react"
 
-import { useMemo, useState } from "react"
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  RotateCcw,
-  Search,
-  SlidersHorizontal,
-  Sparkles,
-} from "lucide-react"
-
-import { useNFTs } from "@/features/nft/hooks/use.nfts"
+import { useNFTCatalog } from "@/features/nft/hooks/use.nfts"
 import { NFTCard } from "@/features/nft/components/NFTCard"
 import { PromotionalBanners } from "@/components/home/PromotionalBanners"
 import { MintingJournal } from "@/components/home/MintingJournal"
+import type {
+  EthAmount,
+  NFTSortOrder,
+} from "@/features/nft/types"
+import { compareEth, formatEth } from "@/lib/money"
 
-export function HomePage() {
-  const [search, setSearch] = useState("")
-  const [category, setCategory] = useState("all")
-  const [sortOrder, setSortOrder] = useState("default")
-  const [showMobileFilters, setShowMobileFilters] = useState(false)
+const tabs: { label: string; sort: NFTSortOrder }[] = [
+  { label: "Todos os NFTs", sort: "default" },
+  { label: "Novos lançamentos", sort: "recent" },
+  { label: "Em alta", sort: "price-desc" },
+]
 
+interface CatalogFilters {
+  q: string
+  category: string
+  sort: NFTSortOrder
+  min?: EthAmount
+  max?: EthAmount
+  page: number
+}
+
+interface HomePageProps {
+  catalog: CatalogFilters
+  onCatalogChange: (update: Partial<CatalogFilters>) => void
+}
+
+export function HomePage({
+  catalog,
+  onCatalogChange,
+}: HomePageProps) {
+  const { q: search, category, sort: sortOrder, min, max, page } =
+    catalog
   const {
-    data: nfts = [],
+    data: catalogData,
     isPending,
     isError,
+    isPlaceholderData,
     refetch,
-  } = useNFTs()
+  } = useNFTCatalog({
+    q: search,
+    category,
+    sort: sortOrder,
+    min,
+    max,
+    page,
+  })
+  const nfts = catalogData?.featured ?? []
+  const categories = catalogData?.categories ?? []
+  const bounds = catalogData?.priceRange ?? { min: "0", max: "0" }
+  const [slide, setSlide] = useState(0)
 
-  const categories = useMemo(() => {
-    return [...new Set(nfts.map((nft) => nft.category))]
-  }, [nfts])
+  const appliedRange = useMemo<[EthAmount, EthAmount] | null>(
+    () =>
+      min !== undefined && max !== undefined ? [min, max] : null,
+    [min, max]
+  )
+  const rangeKey = `${min ?? ""}:${max ?? ""}`
+  const [draftRangeState, setDraftRangeState] = useState<{
+    key: string
+    range: [EthAmount, EthAmount] | null
+  } | null>(null)
+  const draftRange =
+    draftRangeState?.key === rangeKey
+      ? draftRangeState.range
+      : appliedRange
 
-  const filteredNFTs = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase()
+  const draftMin = draftRange?.[0] ?? bounds.min
+  const draftMax = draftRange?.[1] ?? bounds.max
 
-    const result = nfts.filter((nft) => {
-      const matchesSearch = nft.name
-        .toLowerCase()
-        .includes(normalizedSearch)
+  function setDraftRange(range: [EthAmount, EthAmount] | null) {
+    setDraftRangeState({ key: rangeKey, range })
+  }
 
-      const matchesCategory =
-        category === "all" || nft.category === category
+  const filteredNFTs = catalogData?.items ?? []
+  const totalPages = catalogData?.totalPages ?? 1
+  const currentPage = catalogData?.page ?? page
+  const serverPage = catalogData?.page
+  const visibleNFTs = filteredNFTs
 
-      return matchesSearch && matchesCategory
-    })
-
-    switch (sortOrder) {
-      case "price-asc":
-        return result.sort((a, b) => a.price - b.price)
-      case "price-desc":
-        return result.sort((a, b) => b.price - a.price)
-      case "name":
-        return result.sort((a, b) =>
-          a.name.localeCompare(b.name)
-        )
-      default:
-        return result
+  useEffect(() => {
+    if (
+      !isPlaceholderData &&
+      serverPage !== undefined &&
+      serverPage !== page
+    ) {
+      onCatalogChange({ page: serverPage })
     }
-  }, [nfts, search, category, sortOrder])
+  }, [isPlaceholderData, onCatalogChange, page, serverPage])
+
+  const featuredSlides = nfts.slice(0, 3)
+  const heroNFT = featuredSlides[slide] ?? featuredSlides[0]
+  const offerNFT = nfts[1] ?? nfts[0]
 
   function scrollToMarketplace() {
     document.getElementById("marketplace")?.scrollIntoView({
@@ -66,170 +106,130 @@ export function HomePage() {
     })
   }
 
-  function clearFilters() {
-    setSearch("")
-    setCategory("all")
-    setSortOrder("default")
+  // Toda mudança de filtro reinicia a paginação.
+  function changeSearch(value: string) {
+    onCatalogChange({ q: value, page: 1 })
   }
 
-  const hasActiveFilters =
-    search.trim() !== "" ||
-    category !== "all" ||
-    sortOrder !== "default"
+  function changeCategory(value: string) {
+    onCatalogChange({ category: value, page: 1 })
+  }
+
+  function changeSort(value: string) {
+    if (
+      value === "default" ||
+      value === "recent" ||
+      value === "price-asc" ||
+      value === "price-desc" ||
+      value === "name"
+    ) {
+      onCatalogChange({ sort: value, page: 1 })
+    }
+  }
+
+  function applyPrice() {
+    onCatalogChange({
+      min: draftMin,
+      max: draftMax,
+      page: 1,
+    })
+  }
+
+  function clearFilters() {
+    onCatalogChange({
+      q: "",
+      category: "all",
+      sort: "default",
+      min: undefined,
+      max: undefined,
+      page: 1,
+    })
+    setDraftRange(null)
+  }
+
+  const categoryButton = (active: boolean) =>
+    `flex w-full items-center justify-between py-1.5 text-left text-sm transition-colors hover:text-kurio-primary ${
+      active ? "font-bold text-kurio-primary" : "text-kurio-muted"
+    }`
 
   return (
     <div className="w-full">
-      <section className="relative overflow-hidden border-b border-[#493026] py-12 sm:py-16 lg:py-20">
-        <div className="pointer-events-none absolute -left-32 top-16 h-72 w-72 rounded-full bg-[#d58d49]/10 blur-[100px]" />
+      <section className="grid items-center gap-10 py-10 lg:grid-cols-2 lg:py-12">
+        <div className="max-w-xl">
+          <p className="text-xs text-kurio-text">Bem-vindo à Kurio</p>
 
-        <div className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-[#704b35]/20 blur-[100px]" />
+          <h1 className="mt-5 text-4xl font-bold uppercase leading-[1.5] text-kurio-text lg:text-[2.75rem]">
+            Seja dono do futuro da arte digital
+          </h1>
 
-        <div className="relative grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-          <div className="flex flex-col items-start">
-            <div className="mb-7 inline-flex items-center gap-2 border border-[#704b35] bg-[#281813] px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-kurio-primary">
-              <Sparkles size={14} />
-              O futuro da arte digital
-            </div>
+          <p className="mt-5 max-w-md text-sm leading-6 text-kurio-muted">
+            Descubra NFTs selecionados de criadores emergentes e
+            consagrados. Colecione arte digital rara, apoie artistas e
+            tenha uma parte da cultura da internet.
+          </p>
 
-            <h1 className="max-w-2xl text-4xl font-black uppercase leading-[1.12] tracking-[-0.06em] text-kurio-text sm:text-5xl lg:text-[3.5rem] xl:text-[4rem]">
-              Seja dono do
-              <span className="block text-kurio-primary">
-                futuro da
-              </span>
-              arte digital.
-            </h1>
+          <button
+            type="button"
+            onClick={scrollToMarketplace}
+            className="mt-7 bg-kurio-primary px-6 py-3 text-xs font-bold uppercase text-kurio-bg transition-colors hover:bg-[#e6a15f]"
+          >
+            Explorar
+          </button>
 
-            <p className="mt-7 max-w-lg text-sm leading-7 text-kurio-muted sm:text-base">
-              Descubra, colecione e explore NFTs únicos de artistas
-              e criadores digitais. Sua próxima descoberta começa aqui.
-            </p>
-
-            <div className="mt-9 flex flex-wrap items-center gap-4">
-              <button
-                type="button"
-                onClick={scrollToMarketplace}
-                className="inline-flex min-h-12 items-center justify-center gap-3 bg-kurio-primary px-7 py-3 text-sm font-bold uppercase tracking-wide text-kurio-bg transition-colors hover:bg-[#e6a15f]"
-              >
-                Explorar NFTs
-                <ArrowUpRight size={18} />
-              </button>
-
-              <button
-                type="button"
-                onClick={scrollToMarketplace}
-                className="inline-flex min-h-12 items-center justify-center gap-3 border border-[#704b35] px-6 py-3 text-sm font-bold uppercase tracking-wide text-kurio-text transition-colors hover:border-kurio-primary hover:text-kurio-primary"
-              >
-                Ver coleção
-                <ArrowDownRight size={18} />
-              </button>
-            </div>
-
-            <div className="mt-12 flex flex-wrap items-center gap-8 border-t border-[#493026] pt-7 sm:gap-12">
-              <div>
-                <p className="text-2xl font-bold text-kurio-text">
-                  {isPending ? "..." : nfts.length}
-                </p>
-
-                <p className="mt-1 text-xs uppercase tracking-wide text-kurio-muted">
-                  NFTs no catálogo
-                </p>
-              </div>
-
-              <div>
-                <p className="text-2xl font-bold text-kurio-text">
-                  {isPending
-                    ? "..."
-                    : new Set(nfts.map((nft) => nft.creator)).size}
-                </p>
-
-                <p className="mt-1 text-xs uppercase tracking-wide text-kurio-muted">
-                  Criadores
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative mx-auto w-full max-w-[520px]">
-            <div className="absolute -right-4 -top-4 h-full w-full border border-[#704b35] sm:-right-6 sm:-top-6" />
-
-            <div className="relative overflow-hidden border border-[#493026] bg-kurio-surface p-3 sm:p-4">
-              <div className="relative aspect-[4/4.5] overflow-hidden bg-[#35221a]">
-                <img
-                  src="/images/sage-nomad.png"
-                  alt="Arte digital Sage Nomad em destaque"
-                  className="h-full w-full object-cover"
+          {featuredSlides.length > 1 && (
+            <div
+              role="group"
+              aria-label="Destaques da página inicial"
+              className="mt-10 flex gap-2"
+            >
+              {featuredSlides.map((item, index) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-label={`Mostrar destaque ${item.name}`}
+                  aria-current={index === slide}
+                  onClick={() => setSlide(index)}
+                  className={`h-2.5 w-2.5 rounded-full ${
+                    index === slide
+                      ? "bg-kurio-primary"
+                      : "bg-kurio-primary/40"
+                  }`}
                 />
-
-                <div className="absolute left-4 top-4 bg-kurio-primary px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-kurio-bg">
-                  Em destaque
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 px-1 pb-1 pt-5">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.15em] text-kurio-muted">
-                    Coleção Jungle
-                  </p>
-
-                  <h2 className="mt-2 text-lg font-bold text-kurio-text">
-                    Jungle Ape #001
-                  </h2>
-                </div>
-
-                <div className="text-right">
-                  <p className="text-[10px] uppercase tracking-wider text-kurio-muted">
-                    Preço
-                  </p>
-
-                  <p className="mt-2 text-lg font-bold text-kurio-primary">
-                    0.25 ETH
-                  </p>
-                </div>
-              </div>
+              ))}
             </div>
+          )}
+        </div>
 
-            <div className="absolute -bottom-5 -left-3 border border-[#704b35] bg-kurio-bg px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-kurio-primary sm:-left-6">
-              Arte sem limites
-            </div>
-          </div>
+        <div className="justify-self-center lg:justify-self-end">
+          {heroNFT ? (
+            <Link
+              to="/nft/$id"
+              params={{ id: heroNFT.id }}
+              className="block aspect-square w-full max-w-[450px] overflow-hidden rounded-2xl bg-[#35221a]"
+            >
+              <img
+                src={heroNFT.image}
+                alt={`${heroNFT.name} em destaque`}
+                className="h-full w-full object-cover"
+              />
+            </Link>
+          ) : (
+            <div className="aspect-square w-full max-w-[450px] rounded-2xl bg-kurio-surface" />
+          )}
         </div>
       </section>
 
-      <section
-        id="marketplace"
-        className="scroll-mt-24 py-14 sm:py-20"
-      >
-        <div className="mb-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div>
-            <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-kurio-primary">
-              <span className="h-px w-8 bg-kurio-primary" />
-              Descubra
-            </div>
-
-            <h2 className="text-3xl font-black uppercase tracking-tight text-kurio-text sm:text-4xl">
-              Explore o marketplace
-            </h2>
-
-            <p className="mt-3 max-w-xl text-sm leading-6 text-kurio-muted">
-              Encontre obras digitais exclusivas e descubra novos criadores.
-            </p>
-          </div>
-
-          <span className="text-xs uppercase tracking-wider text-kurio-muted">
-            Curadoria Kurio
-          </span>
-        </div>
-
+      <section id="marketplace" className="scroll-mt-24 py-10">
         {isPending ? (
           <div
             role="status"
-            className="border border-[#493026] bg-kurio-surface px-6 py-20 text-center text-kurio-muted"
+            className="bg-kurio-surface px-6 py-20 text-center text-sm text-kurio-muted"
           >
             Carregando NFTs...
           </div>
         ) : isError ? (
           <div className="border border-red-900/50 bg-red-950/20 px-6 py-16 text-center">
-            <p className="mb-5 text-red-400">
+            <p className="mb-5 text-sm text-red-400">
               Não foi possível carregar os NFTs.
             </p>
 
@@ -242,208 +242,213 @@ export function HomePage() {
             </button>
           </div>
         ) : (
-          <div className="grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]">
-            <div>
-              <button
-                type="button"
-                onClick={() =>
-                  setShowMobileFilters((current) => !current)
-                }
-                aria-expanded={showMobileFilters}
-                aria-controls="marketplace-filters"
-                className="flex w-full items-center justify-between border border-[#493026] bg-kurio-surface px-5 py-4 text-sm font-bold uppercase tracking-wide text-kurio-text lg:hidden"
-              >
-                <span className="flex items-center gap-3">
-                  <SlidersHorizontal
-                    size={18}
-                    className="text-kurio-primary"
+          <div className="grid gap-12 lg:grid-cols-[310px_minmax(0,1fr)]">
+            <aside aria-label="Filtros">
+              <div className="bg-kurio-surface px-5 py-5">
+                <label htmlFor="marketplace-search" className="sr-only">
+                  Buscar NFT por nome
+                </label>
+
+                <div className="relative mb-6">
+                  <Search
+                    size={15}
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-kurio-muted"
                   />
-                  Filtros
-                </span>
 
-                <span className="text-kurio-primary">
-                  {showMobileFilters ? "−" : "+"}
-                </span>
-              </button>
-
-              <aside
-                id="marketplace-filters"
-                className={`${showMobileFilters ? "block" : "hidden"} border border-[#493026] bg-kurio-surface p-5 lg:sticky lg:top-24 lg:block lg:self-start`}
-              >
-                <div className="mb-6 flex items-center justify-between gap-3">
-                  <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-kurio-text">
-                    <SlidersHorizontal
-                      size={17}
-                      className="text-kurio-primary"
-                    />
-                    Filtros
-                  </h3>
-
-                  {hasActiveFilters && (
-                    <button
-                      type="button"
-                      onClick={clearFilters}
-                      className="flex items-center gap-1 text-[10px] font-bold uppercase text-kurio-primary hover:text-[#e6a15f]"
-                    >
-                      <RotateCcw size={12} />
-                      Limpar
-                    </button>
-                  )}
+                  <input
+                    id="marketplace-search"
+                    type="search"
+                    placeholder="Buscar NFT..."
+                    value={search}
+                    onChange={(event) => changeSearch(event.target.value)}
+                    className="h-10 w-full border border-[#493026] bg-kurio-bg pl-9 pr-3 text-sm text-kurio-text outline-none placeholder:text-kurio-muted focus:border-kurio-primary"
+                  />
                 </div>
 
-                <div className="border-t border-[#493026] pt-6">
-                  <label
-                    htmlFor="marketplace-search"
-                    className="mb-3 block text-xs font-bold uppercase tracking-wider text-kurio-text"
-                  >
-                    Buscar NFT
-                  </label>
+                <h2 className="text-base font-bold text-kurio-text">
+                  Coleções
+                </h2>
 
-                  <div className="relative">
-                    <Search
-                      size={16}
-                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-kurio-muted"
-                    />
-
-                    <input
-                      id="marketplace-search"
-                      type="search"
-                      placeholder="Nome do NFT..."
-                      value={search}
-                      onChange={(event) =>
-                        setSearch(event.target.value)
-                      }
-                      className="h-11 w-full border border-[#493026] bg-kurio-bg pl-10 pr-3 text-xs text-kurio-text outline-none placeholder:text-kurio-muted/70 focus:border-kurio-primary"
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-7 border-t border-[#493026] pt-6">
-                  <h4 className="mb-4 text-xs font-bold uppercase tracking-wider text-kurio-text">
-                    Categorias
-                  </h4>
-
-                  <div className="space-y-2">
+                <ul className="mt-3 px-2">
+                  <li>
                     <button
                       type="button"
-                      onClick={() => setCategory("all")}
                       aria-pressed={category === "all"}
-                      className={`flex w-full items-center justify-between px-3 py-3 text-left text-xs transition-colors ${
-                        category === "all"
-                          ? "bg-kurio-primary text-kurio-bg"
-                          : "text-kurio-muted hover:bg-kurio-bg hover:text-kurio-text"
-                      }`}
+                      onClick={() => changeCategory("all")}
+                      className={categoryButton(category === "all")}
                     >
-                      Todas as categorias
-                      <span>{nfts.length}</span>
+                      <span>Todas</span>
+                      <span className="text-kurio-text">
+                        {catalogData?.allTotal ?? 0}
+                      </span>
                     </button>
+                  </li>
 
-                    {categories.map((item) => {
-                      const count = nfts.filter(
-                        (nft) => nft.category === item
-                      ).length
+                  {categories.map((item) => (
+                    <li key={item.name}>
+                      <button
+                        type="button"
+                        aria-pressed={category === item.name}
+                        onClick={() => changeCategory(item.name)}
+                        className={categoryButton(
+                          category === item.name
+                        )}
+                      >
+                        <span>{item.name}</span>
+                        <span className="text-kurio-text">{item.count}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
 
-                      return (
-                        <button
-                          key={item}
-                          type="button"
-                          onClick={() => setCategory(item)}
-                          aria-pressed={category === item}
-                          className={`flex w-full items-center justify-between px-3 py-3 text-left text-xs transition-colors ${
-                            category === item
-                              ? "bg-kurio-primary text-kurio-bg"
-                              : "text-kurio-muted hover:bg-kurio-bg hover:text-kurio-text"
-                          }`}
-                        >
-                          <span>{item}</span>
-                          <span>{count}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
+                <h2 className="mt-8 text-base font-bold text-kurio-text">
+                  Faixa de preço
+                </h2>
+
+                <div className="mt-4 space-y-3 px-2">
+                  <label className="block">
+                    <span className="sr-only">Preço mínimo em ETH</span>
+                    <input
+                      type="range"
+                      min={bounds.min}
+                      max={bounds.max}
+                      step="0.01"
+                      value={draftMin}
+                      onChange={(event) =>
+                        setDraftRange([
+                          compareEth(event.target.value, draftMax) < 0
+                            ? event.target.value
+                            : draftMax,
+                          draftMax,
+                        ])
+                      }
+                      className="h-1 w-full accent-[#d58d49]"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="sr-only">Preço máximo em ETH</span>
+                    <input
+                      type="range"
+                      min={bounds.min}
+                      max={bounds.max}
+                      step="0.01"
+                      value={draftMax}
+                      onChange={(event) =>
+                        setDraftRange([
+                          draftMin,
+                          compareEth(event.target.value, draftMin) > 0
+                            ? event.target.value
+                            : draftMin,
+                        ])
+                      }
+                      className="h-1 w-full accent-[#d58d49]"
+                    />
+                  </label>
+
+                  <p className="text-sm text-kurio-muted">
+                    Preço: {formatEth(draftMin)} - {formatEth(draftMax)} ETH
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={applyPrice}
+                    className="bg-kurio-primary px-4 py-2 text-sm font-bold text-kurio-bg transition-colors hover:bg-[#e6a15f]"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              </div>
+
+              {offerNFT && (
+                <Link
+                  to="/nft/$id"
+                  params={{ id: offerNFT.id }}
+                  className="mt-8 block bg-[#2a1a10] pt-5"
+                >
+                  <p className="px-5 text-xl font-bold uppercase text-kurio-primary">
+                    NFT em destaque
+                  </p>
+
+                  <p className="mt-2 text-center font-bold uppercase text-kurio-text">
+                    Oferta limitada
+                  </p>
+
+                  <img
+                    src={offerNFT.image}
+                    alt={offerNFT.name}
+                    className="mt-3 aspect-[4/4.3] w-full rounded-2xl object-cover"
+                  />
+                </Link>
+              )}
+            </aside>
+
+            <div className="min-w-0">
+              <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+                <div
+                  role="group"
+                  aria-label="Atalhos de ordenação"
+                  className="flex flex-wrap gap-6"
+                >
+                  {tabs.map((tab) => {
+                    const active = sortOrder === tab.sort
+
+                    return (
+                      <button
+                        key={tab.label}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => changeSort(tab.sort)}
+                        className={`border-b-2 pb-1 text-sm transition-colors hover:text-kurio-primary ${
+                          active
+                            ? "border-kurio-primary font-bold text-kurio-primary"
+                            : "border-transparent text-kurio-text"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    )
+                  })}
                 </div>
 
-                <div className="mt-7 border-t border-[#493026] pt-6">
-                  <label
-                    htmlFor="marketplace-sort"
-                    className="mb-3 block text-xs font-bold uppercase tracking-wider text-kurio-text"
-                  >
-                    Ordenar por
-                  </label>
+                <div className="relative flex items-center gap-1 text-sm text-kurio-text">
+                  <label htmlFor="marketplace-sort">Ordenar por:</label>
 
                   <select
                     id="marketplace-sort"
                     value={sortOrder}
                     onChange={(event) =>
-                      setSortOrder(event.target.value)
+                      changeSort(event.target.value)
                     }
-                    className="h-11 w-full border border-[#493026] bg-kurio-bg px-3 text-xs text-kurio-text outline-none focus:border-kurio-primary"
+                    className="cursor-pointer appearance-none bg-transparent pr-6 text-sm text-kurio-text outline-none focus-visible:outline-2 focus-visible:outline-kurio-primary"
                   >
-                    <option value="default">
+                    <option value="default" className="bg-kurio-bg">
                       Ordenação padrão
                     </option>
-                    <option value="price-asc">
+                    <option value="recent" className="bg-kurio-bg">
+                      Listados recentemente
+                    </option>
+                    <option value="price-asc" className="bg-kurio-bg">
                       Menor preço
                     </option>
-                    <option value="price-desc">
+                    <option value="price-desc" className="bg-kurio-bg">
                       Maior preço
                     </option>
-                    <option value="name">
+                    <option value="name" className="bg-kurio-bg">
                       Nome (A-Z)
                     </option>
                   </select>
-                </div>
 
-                <div className="mt-7 border border-[#704b35] bg-kurio-bg p-5">
-                  <Sparkles
-                    size={22}
-                    className="mb-4 text-kurio-primary"
+                  <ChevronDown
+                    size={14}
+                    className="pointer-events-none absolute right-0"
                   />
-
-                  <p className="text-sm font-bold uppercase leading-6 text-kurio-text">
-                    Descubra sua próxima obra digital.
-                  </p>
-
-                  <p className="mt-3 text-xs leading-6 text-kurio-muted">
-                    Explore coleções e encontre NFTs únicos na Kurio.
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      clearFilters()
-                      scrollToMarketplace()
-                    }}
-                    className="mt-5 flex items-center gap-2 text-xs font-bold uppercase text-kurio-primary hover:text-[#e6a15f]"
-                  >
-                    Explorar todos
-                    <ArrowUpRight size={15} />
-                  </button>
-                </div>
-              </aside>
-            </div>
-
-            <div className="min-w-0">
-              <div className="mb-6 flex flex-col justify-between gap-4 border-b border-[#493026] pb-5 sm:flex-row sm:items-center">
-                <div>
-                  <h3 className="text-lg font-bold uppercase text-kurio-text">
-                    Todos os NFTs
-                  </h3>
-
-                  <p className="mt-2 text-xs text-kurio-muted">
-                    {filteredNFTs.length} NFT(s) encontrado(s)
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-kurio-primary">
-                  <Sparkles size={15} />
-                  Coleção digital
                 </div>
               </div>
 
               {filteredNFTs.length === 0 ? (
-                <div className="border border-[#493026] bg-kurio-surface px-6 py-16 text-center">
-                  <p className="text-kurio-muted">
+                <div className="bg-kurio-surface px-6 py-16 text-center">
+                  <p className="text-sm text-kurio-muted">
                     Nenhum NFT encontrado.
                   </p>
 
@@ -456,16 +461,62 @@ export function HomePage() {
                   </button>
                 </div>
               ) : (
-                <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                  {filteredNFTs.map((nft) => (
-                    <NFTCard key={nft.id} nft={nft} />
-                  ))}
-                </div>
+                <>
+                  <div className="grid gap-x-7 gap-y-10 sm:grid-cols-2 xl:grid-cols-3">
+                    {visibleNFTs.map((nft) => (
+                      <NFTCard key={nft.id} nft={nft} />
+                    ))}
+                  </div>
+
+                  {totalPages > 1 && (
+                    <nav
+                      aria-label="Paginação do catálogo"
+                      className="mt-12 flex items-center justify-end gap-2"
+                    >
+                      {Array.from(
+                        { length: totalPages },
+                        (_, index) => index + 1
+                      ).map((number) => (
+                        <button
+                          key={number}
+                          type="button"
+                          aria-label={`Página ${number}`}
+                          aria-current={
+                            number === currentPage ? "page" : undefined
+                          }
+                          onClick={() =>
+                            onCatalogChange({ page: number })
+                          }
+                          className={`h-7 w-7 text-sm font-bold ${
+                            number === currentPage
+                              ? "bg-kurio-primary text-kurio-bg"
+                              : "border border-[#704b35] text-kurio-text hover:border-kurio-primary"
+                          }`}
+                        >
+                          {number}
+                        </button>
+                      ))}
+
+                      <button
+                        type="button"
+                        aria-label="Próxima página"
+                        disabled={currentPage === totalPages}
+                        onClick={() =>
+                          onCatalogChange({ page: currentPage + 1 })
+                        }
+                        className="flex h-7 w-7 items-center justify-center border border-[#704b35] text-kurio-text hover:border-kurio-primary disabled:opacity-40"
+                      >
+                        <ChevronRight size={15} />
+                      </button>
+                    </nav>
+                  )}
+                </>
               )}
             </div>
           </div>
         )}
       </section>
+
       <PromotionalBanners />
       <MintingJournal />
     </div>

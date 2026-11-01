@@ -1,5 +1,3 @@
-
-import React from "react"
 import ReactDOM from "react-dom/client"
 
 import {
@@ -14,6 +12,7 @@ import {
 
 import { routeTree } from "./routeTree.gen"
 import "./index.css"
+
 import { CartProvider } from "./features/cart/context/CartContext"
 import { AuthProvider } from "@/features/auth/context/Auth.Context"
 
@@ -38,7 +37,6 @@ declare module "@tanstack/react-router" {
 }
 
 async function bootstrap() {
-
   const { worker } = await import("./mocks/browser")
 
   await worker.start()
@@ -46,15 +44,13 @@ async function bootstrap() {
   ReactDOM.createRoot(
     document.getElementById("root")!
   ).render(
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <CartProvider>
-            <RouterProvider router={router} />
-          </CartProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <CartProvider>
+          <RouterProvider router={router} />
+        </CartProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   )
 }
 

@@ -6,18 +6,23 @@ import {
   ShoppingBag,
   X,
 } from "lucide-react"
+import { formatEth, multiplyEth } from "@/lib/money"
 
 interface OrderItem {
   id: string
   name: string
   image: string
-  price: number
+  price: string
   quantity: number
 }
 
 export interface CompletedOrder {
   orderId: string
-  total: number
+  subtotal: string
+  discount: string
+  networkFee: string
+  total: string
+  couponCode: string | null
   items: OrderItem[]
   createdAt: string
 }
@@ -31,11 +36,6 @@ export function OrderConfirmationDialog({
   order,
   onClose,
 }: OrderConfirmationDialogProps) {
-  const subtotal = order.items.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
-  )
-
   const totalItems = order.items.reduce(
     (total, item) => total + item.quantity,
     0
@@ -148,7 +148,7 @@ export function OrderConfirmationDialog({
                 </div>
 
                 <span className="shrink-0 text-xs font-bold text-kurio-primary">
-                  {(item.price * item.quantity).toFixed(2)} ETH
+                  {formatEth(multiplyEth(item.price, item.quantity))} ETH
                 </span>
               </article>
             ))}
@@ -159,15 +159,27 @@ export function OrderConfirmationDialog({
               <span className="text-kurio-muted">Subtotal</span>
 
               <span className="text-kurio-text">
-                {subtotal.toFixed(2)} ETH
+                {formatEth(order.subtotal)} ETH
               </span>
             </div>
+
+            {order.couponCode && (
+              <div className="flex justify-between gap-4">
+                <span className="text-kurio-muted">
+                  Desconto ({order.couponCode})
+                </span>
+
+                <span className="text-kurio-text">
+                  -{formatEth(order.discount)} ETH
+                </span>
+              </div>
+            )}
 
             <div className="flex justify-between gap-4">
               <span className="text-kurio-muted">Taxa de rede</span>
 
-              <span className="text-kurio-muted">
-                Não simulada
+              <span className="text-kurio-text">
+                {formatEth(order.networkFee)} ETH
               </span>
             </div>
 
@@ -177,7 +189,7 @@ export function OrderConfirmationDialog({
               </span>
 
               <span className="text-kurio-primary">
-                {order.total.toFixed(2)} ETH
+                {formatEth(order.total)} ETH
               </span>
             </div>
           </div>

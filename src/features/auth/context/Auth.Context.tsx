@@ -2,9 +2,11 @@
 import {
   createContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 
 import type { User, LoginCredentials } from "../types"
 
@@ -32,8 +34,33 @@ export function AuthProvider({
 }: {
   children: ReactNode
 }) {
+  const queryClient = useQueryClient()
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const previousUserId = useRef<string | null>(null)
+
+  useEffect(() => {
+    const currentUserId = user?.id ?? null
+    const previousId = previousUserId.current
+
+    if (previousId && previousId !== currentUserId) {
+      const privateQueryKeys = new Set([
+        "favorites",
+        "profile",
+        "wallets",
+        "order",
+        "pending-order",
+        "checkout-terminal-order",
+      ])
+
+      queryClient.removeQueries({
+        predicate: (query) =>
+          privateQueryKeys.has(String(query.queryKey[0])),
+      })
+    }
+
+    previousUserId.current = currentUserId
+  }, [queryClient, user?.id])
 
   useEffect(() => {
     let active = true
