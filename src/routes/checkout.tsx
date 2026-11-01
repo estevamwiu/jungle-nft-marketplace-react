@@ -1,4 +1,3 @@
-
 import { useState, type FormEvent } from "react"
 import {
   createFileRoute,
@@ -17,6 +16,7 @@ import {
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { useCart } from "@/features/cart/hooks/use.cart"
 import { createOrder } from "@/features/checkout/api/checkout-api"
+import { saveOrder } from "@/features/activity/order-storage"
 
 export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
@@ -112,6 +112,11 @@ function CheckoutPage() {
       return
     }
 
+    if (!user) {
+      setError("Não foi possível identificar o usuário autenticado.")
+      return
+    }
+
     if (
       !form.displayName.trim() ||
       !form.username.trim() ||
@@ -125,10 +130,7 @@ function CheckoutPage() {
       return
     }
 
-    if (
-      form.useAnotherWallet &&
-      !form.secondaryWallet.trim()
-    ) {
+    if (form.useAnotherWallet && !form.secondaryWallet.trim()) {
       setError("Informe o endereço da carteira secundária.")
       return
     }
@@ -183,10 +185,20 @@ function CheckoutPage() {
         token
       )
 
-      setCompletedOrder({
+      const completedPurchase = {
         orderId: response.orderId,
         total: response.total,
         items: orderItems,
+        createdAt: new Date().toISOString(),
+        status: "completed" as const,
+      }
+
+      saveOrder(user.id, completedPurchase)
+
+      setCompletedOrder({
+        orderId: completedPurchase.orderId,
+        total: completedPurchase.total,
+        items: completedPurchase.items,
       })
 
       clearCart()
@@ -204,7 +216,6 @@ function CheckoutPage() {
     }
   }
 
-  
   if (completedOrder) {
     return (
       <div
@@ -321,7 +332,6 @@ function CheckoutPage() {
       </div>
     )
   }
-
 
   if (isLoading) {
     return (
