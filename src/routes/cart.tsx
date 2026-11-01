@@ -48,6 +48,7 @@ function CartPage() {
     retry: false,
   })
   const quote = quoteQuery.data
+  const isQuotePending = quoteQuery.isFetching && !quote
   const quoteErrorMessage = quoteQuery.isError
     ? isAxiosError<{ message?: string }>(quoteQuery.error)
       ? quoteQuery.error.response?.data?.message ??
@@ -234,7 +235,7 @@ function CartPage() {
                           }
                           disabled={quantity <= 1}
                           aria-label={`Diminuir quantidade de ${nft.name}`}
-                          className="flex h-7 w-7 items-center justify-center rounded-full bg-kurio-primary text-kurio-bg transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40"
+                          className="flex h-7 w-7 items-center justify-center rounded bg-kurio-primary text-kurio-bg transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <Minus size={14} />
                         </button>
@@ -253,7 +254,7 @@ function CartPage() {
                             quantity >= nft.availableQuantity
                           }
                           aria-label={`Aumentar quantidade de ${nft.name}`}
-                          className="flex h-7 w-7 items-center justify-center rounded-full bg-kurio-primary text-kurio-bg transition-opacity hover:opacity-85"
+                          className="flex h-7 w-7 items-center justify-center rounded bg-kurio-primary text-kurio-bg transition-opacity hover:opacity-85"
                         >
                           <Plus size={14} />
                         </button>
@@ -372,18 +373,34 @@ function CartPage() {
                 </p>
               )}
 
-              <div className="space-y-4 text-sm">
+              {isQuotePending && (
+                <p
+                  role="status"
+                  aria-label="Calculando resumo do carrinho..."
+                  className="sr-only"
+                >
+                  Calculando resumo do carrinho...
+                </p>
+              )}
+
+              <div
+                className="space-y-4 text-sm"
+                aria-busy={isQuotePending}
+              >
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-kurio-text">
                     Subtotal
                   </span>
 
                   <span className="text-kurio-text">
-                    {quote
+                    {isQuotePending ? (
+                      <span
+                        aria-hidden="true"
+                        className="skeleton-shimmer inline-block h-4 w-16 bg-kurio-surface align-middle"
+                      />
+                    ) : quote
                       ? `${formatEth(quote.subtotal)} ETH`
-                      : quoteQuery.isFetching
-                        ? "Calculando..."
-                        : "—"}
+                      : "—"}
                   </span>
                 </div>
 
@@ -393,7 +410,12 @@ function CartPage() {
                   </span>
 
                   <span className="text-kurio-text">
-                    {quote
+                    {isQuotePending ? (
+                      <span
+                        aria-hidden="true"
+                        className="skeleton-shimmer inline-block h-4 w-16 bg-kurio-surface align-middle"
+                      />
+                    ) : quote
                       ? `-${formatEth(quote.discount)} ETH`
                       : "—"}
                   </span>
@@ -405,7 +427,12 @@ function CartPage() {
                   </span>
 
                   <span className="text-kurio-text">
-                    {quote
+                    {isQuotePending ? (
+                      <span
+                        aria-hidden="true"
+                        className="skeleton-shimmer inline-block h-4 w-16 bg-kurio-surface align-middle"
+                      />
+                    ) : quote
                       ? `${formatEth(quote.networkFee)} ETH`
                       : "—"}
                   </span>
@@ -418,11 +445,14 @@ function CartPage() {
                 </span>
 
                 <span className="text-lg font-black text-kurio-primary">
-                  {quote
+                  {isQuotePending ? (
+                    <span
+                      aria-hidden="true"
+                      className="skeleton-shimmer inline-block h-5 w-20 bg-kurio-surface align-middle"
+                    />
+                  ) : quote
                     ? `${formatEth(quote.total)} ETH`
-                    : quoteQuery.isFetching
-                      ? "Calculando..."
-                      : "—"}
+                    : "—"}
                 </span>
               </div>
 

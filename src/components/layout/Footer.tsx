@@ -2,12 +2,61 @@ import { useState, type FormEvent } from "react"
 import { Link, useNavigate } from "@tanstack/react-router"
 
 const socialNetworks = [
-  { name: "Facebook", symbol: "f" },
-  { name: "Instagram", symbol: "◎" },
-  { name: "Twitter", symbol: "𝕏" },
-  { name: "LinkedIn", symbol: "in" },
-  { name: "YouTube", symbol: "▶" },
+  { name: "Facebook", type: "facebook" },
+  { name: "Instagram", type: "instagram" },
+  { name: "Twitter", type: "twitter" },
+  { name: "LinkedIn", type: "linkedin" },
+  { name: "YouTube", type: "youtube" },
 ]
+
+function SocialIcon({
+  type,
+}: {
+  type: (typeof socialNetworks)[number]["type"]
+}) {
+  if (type === "instagram") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        className="size-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
+        <rect x="3" y="3" width="18" height="18" rx="5" />
+        <circle cx="12" cy="12" r="4" />
+        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+      </svg>
+    )
+  }
+
+  if (type === "facebook") {
+    return <span className="text-xl font-bold leading-none">f</span>
+  }
+
+  if (type === "linkedin") {
+    return <span className="text-sm font-bold leading-none">in</span>
+  }
+
+  if (type === "youtube") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5">
+        <rect x="3" y="6" width="18" height="12" rx="2" fill="currentColor" />
+        <path d="m10 9 5 3-5 3z" fill="#281813" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5">
+      <path
+        fill="currentColor"
+        d="M23.4 4.8a9.5 9.5 0 0 1-2.7.7 4.7 4.7 0 0 0 2.1-2.6 9.4 9.4 0 0 1-3 1.1 4.7 4.7 0 0 0-8.1 4.3A13.3 13.3 0 0 1 2 3.4a4.7 4.7 0 0 0 1.5 6.3 4.7 4.7 0 0 1-2.1-.6v.1a4.7 4.7 0 0 0 3.8 4.6 4.7 4.7 0 0 1-2.1.1 4.7 4.7 0 0 0 4.4 3.3A9.4 9.4 0 0 1 0 19.2a13.3 13.3 0 0 0 20.5-11.3v-.6a9.5 9.5 0 0 0 2.9-2.5Z"
+      />
+    </svg>
+  )
+}
 
 const helpItems = [
   "Central de ajuda",
@@ -22,6 +71,10 @@ const collectionItems = [
   "Fotografia",
   "Música",
   "Arte 3D",
+  "Colecionáveis",
+  "Generativa",
+  "Jogos",
+  "Assinaturas",
   "Utilidade",
 ]
 
@@ -67,7 +120,7 @@ export function Footer() {
 
   return (
     <footer className="kurio-container mt-20 text-kurio-text">
-      <div className="grid gap-8 bg-kurio-surface px-6 py-8 sm:grid-cols-2 md:px-12 xl:grid-cols-4 xl:gap-0">
+      <div className="grid gap-8 bg-kurio-surface px-6 py-8 sm:grid-cols-2 md:px-12 xl:grid-cols-[1fr_1fr_1fr_1.25fr] xl:gap-0">
         {highlights.map((item) => (
           <div
             key={item.letter}
@@ -93,7 +146,10 @@ export function Footer() {
             Antecipe-se ao próximo lançamento
           </h3>
 
-          <form onSubmit={handleNewsletterSubmit} className="flex w-full">
+          <form
+            onSubmit={handleNewsletterSubmit}
+            className="flex min-h-11 w-full"
+          >
             <input
               type="email"
               required
@@ -104,12 +160,12 @@ export function Footer() {
                 setEmail(event.target.value)
                 setNewsletterMessage("")
               }}
-              className="min-w-0 flex-1 bg-[#38200f] px-3 py-2.5 text-sm text-kurio-text outline-none placeholder:text-kurio-muted focus:outline-2 focus:outline-kurio-primary"
+              className="min-w-[180px] flex-1 rounded-l bg-[#38200f] px-4 py-3 text-sm text-kurio-text outline-none placeholder:text-kurio-muted focus:outline-2 focus:outline-kurio-primary"
             />
 
             <button
               type="submit"
-              className="bg-kurio-primary px-4 py-2.5 text-base font-bold text-kurio-bg transition-colors hover:bg-[#e6a15f]"
+              className="rounded bg-kurio-primary px-5 py-2.5 text-base font-bold text-kurio-bg transition-colors hover:bg-[#e6a15f]"
             >
               Enviar
             </button>
@@ -198,9 +254,9 @@ export function Footer() {
                 title={social.name}
                 aria-label={social.name}
                 role="img"
-                className="flex h-8 w-8 items-center justify-center rounded border border-[#80502e] text-sm font-bold text-kurio-primary"
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#80502e] text-kurio-primary transition-colors hover:bg-[#38200f]"
               >
-                {social.symbol}
+                <SocialIcon type={social.type} />
               </span>
             ))}
           </div>
@@ -209,7 +265,7 @@ export function Footer() {
             Carteiras compatíveis
           </h3>
 
-          <div className="inline-flex flex-wrap items-center gap-2 rounded border border-[#80502e] bg-[#38200f] px-3 py-1.5 text-[9px] font-bold uppercase text-kurio-primary">
+          <div className="inline-flex max-w-full flex-nowrap items-center gap-2 whitespace-nowrap rounded border border-[#80502e] bg-[#38200f] px-3 py-2.5 text-[9px] font-bold uppercase text-kurio-primary">
             <span>MetaMask</span>
             <span aria-hidden="true">·</span>
             <span>WalletConnect</span>

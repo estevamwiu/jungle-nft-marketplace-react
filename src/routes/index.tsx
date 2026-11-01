@@ -1,7 +1,7 @@
 
 import { createFileRoute } from "@tanstack/react-router"
 import { HomePage } from "@/components/home/HomePage"
-import type { EthAmount } from "@/features/nft/types"
+import type { EthAmount, NFTNetwork } from "@/features/nft/types"
 import {
   compareEth,
   formatEth,
@@ -18,6 +18,7 @@ type SortOrder =
 interface CatalogSearch {
   q?: string
   category?: string
+  network?: NFTNetwork
   sort?: SortOrder
   min?: EthAmount
   max?: EthAmount
@@ -59,6 +60,12 @@ export const Route = createFileRoute("/")({
         typeof search.category === "string"
           ? search.category
           : "all",
+      network:
+        search.network === "Ethereum" ||
+        search.network === "Polygon" ||
+        search.network === "Solana"
+          ? search.network
+          : undefined,
       sort:
         sortOrders.find((sort) => sort === search.sort) ??
         "default",
@@ -96,6 +103,7 @@ function HomeRoute() {
       catalog={{
         q: filters.q ?? "",
         category: filters.category ?? "all",
+        network: filters.network ?? "all",
         sort: filters.sort ?? "default",
         min: filters.min,
         max: filters.max,
@@ -113,6 +121,8 @@ function HomeRoute() {
                 (next.category ?? "all") === "all"
                   ? undefined
                   : next.category,
+              network:
+                next.network === "all" ? undefined : next.network,
               sort:
                 (next.sort ?? "default") === "default"
                   ? undefined

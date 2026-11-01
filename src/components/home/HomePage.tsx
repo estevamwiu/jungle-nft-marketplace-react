@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "@tanstack/react-router"
-import { ChevronDown, ChevronRight, Search } from "lucide-react"
+import { ChevronDown, ChevronRight } from "lucide-react"
 
 import { useNFTCatalog } from "@/features/nft/hooks/use.nfts"
 import { NFTCard } from "@/features/nft/components/NFTCard"
@@ -8,6 +8,7 @@ import { PromotionalBanners } from "@/components/home/PromotionalBanners"
 import { MintingJournal } from "@/components/home/MintingJournal"
 import type {
   EthAmount,
+  NFTNetwork,
   NFTSortOrder,
 } from "@/features/nft/types"
 import { compareEth, formatEth } from "@/lib/money"
@@ -18,9 +19,28 @@ const tabs: { label: string; sort: NFTSortOrder }[] = [
   { label: "Em alta", sort: "price-desc" },
 ]
 
+const collectionFilters = [
+  { value: "Digital Art", label: "Arte digital" },
+  { value: "Photography", label: "Fotografia" },
+  { value: "Music", label: "Música" },
+  { value: "3D Art", label: "Arte 3D" },
+  { value: "Collectibles", label: "Colecionáveis" },
+  { value: "Generative", label: "Generativa" },
+  { value: "Games", label: "Jogos" },
+  { value: "Subscriptions", label: "Assinaturas" },
+  { value: "Utility", label: "Utilidade" },
+] as const
+
+const networkFilters: NFTNetwork[] = [
+  "Ethereum",
+  "Polygon",
+  "Solana",
+]
+
 interface CatalogFilters {
   q: string
   category: string
+  network: NFTNetwork | "all"
   sort: NFTSortOrder
   min?: EthAmount
   max?: EthAmount
@@ -47,6 +67,7 @@ export function HomePage({
   } = useNFTCatalog({
     q: search,
     category,
+    network: catalog.network,
     sort: sortOrder,
     min,
     max,
@@ -107,12 +128,16 @@ export function HomePage({
   }
 
   // Toda mudança de filtro reinicia a paginação.
-  function changeSearch(value: string) {
-    onCatalogChange({ q: value, page: 1 })
-  }
-
   function changeCategory(value: string) {
     onCatalogChange({ category: value, page: 1 })
+  }
+
+  function changeNetwork(value: NFTNetwork | "all") {
+    onCatalogChange({
+      network:
+        catalog.network === value && value !== "all" ? "all" : value,
+      page: 1,
+    })
   }
 
   function changeSort(value: string) {
@@ -139,6 +164,7 @@ export function HomePage({
     onCatalogChange({
       q: "",
       category: "all",
+      network: "all",
       sort: "default",
       min: undefined,
       max: undefined,
@@ -171,50 +197,58 @@ export function HomePage({
           <button
             type="button"
             onClick={scrollToMarketplace}
-            className="mt-7 bg-kurio-primary px-6 py-3 text-xs font-bold uppercase text-kurio-bg transition-colors hover:bg-[#e6a15f]"
+            className="mt-7 rounded bg-kurio-primary px-6 py-3 text-xs font-bold uppercase text-kurio-bg transition-colors hover:bg-[#e6a15f]"
           >
             Explorar
           </button>
 
-          {featuredSlides.length > 1 && (
-            <div
-              role="group"
-              aria-label="Destaques da página inicial"
-              className="mt-10 flex gap-2"
-            >
-              {featuredSlides.map((item, index) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  aria-label={`Mostrar destaque ${item.name}`}
-                  aria-current={index === slide}
-                  onClick={() => setSlide(index)}
-                  className={`h-2.5 w-2.5 rounded-full ${
-                    index === slide
-                      ? "bg-kurio-primary"
-                      : "bg-kurio-primary/40"
-                  }`}
-                />
-              ))}
-            </div>
-          )}
         </div>
 
-        <div className="justify-self-center lg:justify-self-end">
+        <div className="w-full justify-self-center lg:justify-self-end">
           {heroNFT ? (
-            <Link
-              to="/nft/$id"
-              params={{ id: heroNFT.id }}
-              className="block aspect-square w-full max-w-[450px] overflow-hidden rounded-2xl bg-[#35221a]"
-            >
-              <img
-                src={heroNFT.image}
-                alt={`${heroNFT.name} em destaque`}
-                className="h-full w-full object-cover"
-              />
-            </Link>
+            <div className="relative mx-auto w-full max-w-[450px] lg:ml-auto lg:mr-0">
+              <Link
+                to="/nft/$id"
+                params={{ id: heroNFT.id }}
+                className="block aspect-square w-full overflow-hidden rounded-2xl bg-[#35221a]"
+              >
+                <img
+                  src={heroNFT.image}
+                  alt={`${heroNFT.name} em destaque`}
+                  fetchPriority="high"
+                  className="h-full w-full object-cover"
+                />
+              </Link>
+
+              {featuredSlides.length > 1 && (
+                <div
+                  role="group"
+                  aria-label="Destaques da página inicial"
+                  className="mt-4 flex justify-center gap-2 lg:absolute lg:right-full lg:top-[88%] lg:mr-8 lg:mt-0 lg:-translate-y-1/2"
+                >
+                  {featuredSlides.map((item, index) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      aria-label={`Mostrar destaque ${item.name}`}
+                      aria-current={index === slide}
+                      onClick={() => setSlide(index)}
+                      className="flex h-6 w-6 items-center justify-center rounded"
+                    >
+                      <span
+                        className={`h-2.5 w-2.5 rounded-full ${
+                          index === slide
+                            ? "bg-kurio-primary"
+                            : "bg-kurio-primary/40"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
-            <div className="aspect-square w-full max-w-[450px] rounded-2xl bg-kurio-surface" />
+            <div className="skeleton-shimmer aspect-square w-full max-w-[450px] rounded-2xl bg-kurio-surface" />
           )}
         </div>
       </section>
@@ -223,9 +257,63 @@ export function HomePage({
         {isPending ? (
           <div
             role="status"
-            className="bg-kurio-surface px-6 py-20 text-center text-sm text-kurio-muted"
+            className="grid gap-12 lg:grid-cols-[310px_minmax(0,1fr)]"
           >
-            Carregando NFTs...
+            <span className="sr-only">Carregando NFTs...</span>
+
+            <aside aria-hidden="true">
+              <div className="space-y-5 bg-kurio-surface px-5 py-5">
+                <div className="skeleton-shimmer h-10 bg-kurio-bg" />
+                <div className="skeleton-shimmer h-5 w-28 bg-kurio-bg" />
+                <div className="space-y-3">
+                  {Array.from({ length: 7 }, (_, index) => (
+                    <div
+                      key={index}
+                      className="skeleton-shimmer h-5 bg-kurio-bg"
+                    />
+                  ))}
+                </div>
+                <div className="skeleton-shimmer mt-8 h-5 w-36 bg-kurio-bg" />
+                <div className="space-y-4">
+                  <div className="skeleton-shimmer h-1 bg-kurio-bg" />
+                  <div className="skeleton-shimmer h-1 bg-kurio-bg" />
+                  <div className="skeleton-shimmer h-10 bg-kurio-bg" />
+                </div>
+              </div>
+              <div className="skeleton-shimmer mt-8 aspect-[4/4.3] bg-kurio-surface" />
+            </aside>
+
+            <div className="min-w-0" aria-hidden="true">
+              <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex gap-6">
+                  <div className="skeleton-shimmer h-5 w-28 bg-kurio-surface" />
+                  <div className="skeleton-shimmer h-5 w-32 bg-kurio-surface" />
+                  <div className="skeleton-shimmer h-5 w-16 bg-kurio-surface" />
+                </div>
+                <div className="skeleton-shimmer h-5 w-44 bg-kurio-surface" />
+              </div>
+
+              <div className="grid gap-x-7 gap-y-10 sm:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 9 }, (_, index) => (
+                  <div key={index}>
+                    <div className="skeleton-shimmer bg-kurio-surface px-4 pb-8 pt-5">
+                      <div className="skeleton-shimmer aspect-square rounded-xl bg-[#35221a]" />
+                    </div>
+                    <div className="skeleton-shimmer mt-3 h-5 w-3/4 bg-kurio-surface" />
+                    <div className="skeleton-shimmer mt-1 h-5 w-1/3 bg-kurio-surface" />
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-12 flex justify-end gap-2">
+                {Array.from({ length: 6 }, (_, index) => (
+                  <div
+                    key={index}
+                    className="skeleton-shimmer h-7 w-7 bg-kurio-surface"
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         ) : isError ? (
           <div className="border border-red-900/50 bg-red-950/20 px-6 py-16 text-center">
@@ -245,26 +333,6 @@ export function HomePage({
           <div className="grid gap-12 lg:grid-cols-[310px_minmax(0,1fr)]">
             <aside aria-label="Filtros">
               <div className="bg-kurio-surface px-5 py-5">
-                <label htmlFor="marketplace-search" className="sr-only">
-                  Buscar NFT por nome
-                </label>
-
-                <div className="relative mb-6">
-                  <Search
-                    size={15}
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-kurio-muted"
-                  />
-
-                  <input
-                    id="marketplace-search"
-                    type="search"
-                    placeholder="Buscar NFT..."
-                    value={search}
-                    onChange={(event) => changeSearch(event.target.value)}
-                    className="h-10 w-full border border-[#493026] bg-kurio-bg pl-9 pr-3 text-sm text-kurio-text outline-none placeholder:text-kurio-muted focus:border-kurio-primary"
-                  />
-                </div>
-
                 <h2 className="text-base font-bold text-kurio-text">
                   Coleções
                 </h2>
@@ -284,21 +352,28 @@ export function HomePage({
                     </button>
                   </li>
 
-                  {categories.map((item) => (
-                    <li key={item.name}>
-                      <button
-                        type="button"
-                        aria-pressed={category === item.name}
-                        onClick={() => changeCategory(item.name)}
-                        className={categoryButton(
-                          category === item.name
-                        )}
-                      >
-                        <span>{item.name}</span>
-                        <span className="text-kurio-text">{item.count}</span>
-                      </button>
-                    </li>
-                  ))}
+                  {collectionFilters.map((filter) => {
+                    const count =
+                      categories.find(
+                        (item) => item.name === filter.value
+                      )?.count ?? 0
+
+                    return (
+                      <li key={filter.value}>
+                        <button
+                          type="button"
+                          aria-pressed={category === filter.value}
+                          onClick={() => changeCategory(filter.value)}
+                          className={categoryButton(
+                            category === filter.value
+                          )}
+                        >
+                          <span>{filter.label}</span>
+                          <span className="text-kurio-text">{count}</span>
+                        </button>
+                      </li>
+                    )
+                  })}
                 </ul>
 
                 <h2 className="mt-8 text-base font-bold text-kurio-text">
@@ -353,11 +428,32 @@ export function HomePage({
                   <button
                     type="button"
                     onClick={applyPrice}
-                    className="bg-kurio-primary px-4 py-2 text-sm font-bold text-kurio-bg transition-colors hover:bg-[#e6a15f]"
+                    className="rounded bg-kurio-primary px-5 py-2 text-sm font-bold text-kurio-bg transition-colors hover:bg-[#e6a15f]"
                   >
                     Aplicar
                   </button>
                 </div>
+
+                <h2 className="mt-8 text-base font-bold text-kurio-text">
+                  Rede
+                </h2>
+
+                <ul className="mt-3 px-2">
+                  {networkFilters.map((network) => (
+                    <li key={network}>
+                      <button
+                        type="button"
+                        aria-pressed={catalog.network === network}
+                        onClick={() => changeNetwork(network)}
+                        className={categoryButton(
+                          catalog.network === network
+                        )}
+                      >
+                        {network}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
 
               {offerNFT && (
@@ -399,7 +495,7 @@ export function HomePage({
                         type="button"
                         aria-pressed={active}
                         onClick={() => changeSort(tab.sort)}
-                        className={`border-b-2 pb-1 text-sm transition-colors hover:text-kurio-primary ${
+                        className={`rounded-none border-b-2 pb-1 text-sm transition-colors hover:text-kurio-primary focus-visible:outline-2 focus-visible:outline-kurio-primary ${
                           active
                             ? "border-kurio-primary font-bold text-kurio-primary"
                             : "border-transparent text-kurio-text"
@@ -489,8 +585,8 @@ export function HomePage({
                           }
                           className={`h-7 w-7 text-sm font-bold ${
                             number === currentPage
-                              ? "bg-kurio-primary text-kurio-bg"
-                              : "border border-[#704b35] text-kurio-text hover:border-kurio-primary"
+                              ? "rounded bg-kurio-primary text-kurio-bg"
+                              : "rounded border border-[#704b35] text-kurio-text hover:border-kurio-primary"
                           }`}
                         >
                           {number}
@@ -504,7 +600,7 @@ export function HomePage({
                         onClick={() =>
                           onCatalogChange({ page: currentPage + 1 })
                         }
-                        className="flex h-7 w-7 items-center justify-center border border-[#704b35] text-kurio-text hover:border-kurio-primary disabled:opacity-40"
+                        className="flex h-7 w-7 items-center justify-center rounded border border-[#704b35] text-kurio-text hover:border-kurio-primary disabled:opacity-40"
                       >
                         <ChevronRight size={15} />
                       </button>

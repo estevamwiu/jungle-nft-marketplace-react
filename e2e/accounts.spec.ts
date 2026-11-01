@@ -62,6 +62,9 @@ test("favorite state is isolated per user and failed mutations are announced", a
 test("profile changes persist after a page reload", async ({ page }) => {
   await loginAs(page)
   await page.goto("/profile")
+  await expect(
+    page.getByText("Gerencie as informações do seu perfil de colecionador.")
+  ).toHaveCount(0)
   await page.locator("#profile-display-name").fill("Updated Collector")
   await page.locator("#profile-username").fill("updated-collector")
   await page.getByRole("button", { name: "Salvar perfil" }).click()

@@ -16,7 +16,7 @@ export const Route = createFileRoute("/register")({
 })
 
 const inputClass =
-  "h-[31px] w-full rounded border border-[#493026] bg-[#21130f] px-3 text-[11px] text-[#f4e8d4] outline-none transition-colors placeholder:text-[#a78c70] focus:border-[#d58d49] disabled:opacity-50"
+  "h-[50px] w-full rounded-lg border border-[#493026] bg-[#160e0b] px-4 text-sm text-[#f4e8d4] outline-none transition-colors placeholder:text-[#a78c70] focus:border-[#d58d49] disabled:opacity-50"
 
 function RegisterPage() {
   const navigate = useNavigate()
@@ -119,14 +119,14 @@ function RegisterPage() {
 
   return (
     <AuthModal mode="register">
-      <p className="mt-7 text-center text-[10px] leading-4 text-[#f4e8d4]">
+      <p className="mt-0 hidden text-center text-[10px] leading-4 text-[#f4e8d4] md:mt-7 md:block">
         Crie seu perfil de colecionador e conecte uma
         carteira quando quiser.
       </p>
 
       <form
         onSubmit={(event) => void handleSubmit(event)}
-        className="mx-auto mt-5 max-w-[248px] space-y-2"
+        className="mx-auto mt-0 w-full max-w-none space-y-3 md:mt-6 md:max-w-[320px]"
       >
         <label htmlFor="register-name" className="sr-only">
           Nome de usuário
@@ -230,9 +230,17 @@ function RegisterPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="mt-2 h-[34px] w-full rounded bg-[#d58d49] text-xs font-bold text-[#160e0b] transition-colors hover:bg-[#e6a15f] disabled:opacity-50"
+          aria-label="Criar conta"
+          className="mt-3 h-[60px] w-full rounded-lg bg-[#d58d49] text-base font-bold text-[#160e0b] transition-colors hover:bg-[#e6a15f] disabled:opacity-50 md:h-11 md:rounded"
         >
-          {isSubmitting ? "Criando conta..." : "Criar conta"}
+          {isSubmitting ? (
+            "Criando conta..."
+          ) : (
+            <>
+              <span className="md:hidden">Criar perfil</span>
+              <span className="hidden md:inline">Criar conta</span>
+            </>
+          )}
         </button>
       </form>
     </AuthModal>

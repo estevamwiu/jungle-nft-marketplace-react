@@ -516,6 +516,7 @@ export const handlers = [
     const url = new URL(request.url)
     const q = url.searchParams.get("q")?.trim().toLowerCase().slice(0, 100) ?? ""
     const category = url.searchParams.get("category") ?? "all"
+    const network = url.searchParams.get("network") ?? "all"
     const sort = url.searchParams.get("sort")
     const minRaw = url.searchParams.get("min")
     const maxRaw = url.searchParams.get("max")
@@ -565,6 +566,8 @@ export const handlers = [
       const matchesSearch = nft.name.toLowerCase().includes(q)
       const matchesCategory =
         category === "all" || nft.category === category
+      const matchesNetwork =
+        network === "all" || nft.network === network
       const matchesMin =
         min === undefined || compareEth(nft.price, min) >= 0
       const matchesMax =
@@ -573,6 +576,7 @@ export const handlers = [
       return (
         matchesSearch &&
         matchesCategory &&
+        matchesNetwork &&
         matchesMin &&
         matchesMax
       )
@@ -631,7 +635,9 @@ export const handlers = [
     })
   }),
 
-  http.get("/api/nfts/:id", ({ params }) => {
+  http.get("/api/nfts/:id", async ({ params }) => {
+    await waitForMockLatency()
+
     const nft = mockNfts.find(
       (item) => item.id === params.id
     )

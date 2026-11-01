@@ -6,6 +6,7 @@ import type { NFTCatalogQuery } from "../types"
 const allNFTsQuery: NFTCatalogQuery = {
   q: "",
   category: "all",
+  network: "all",
   sort: "default",
   page: 1,
   pageSize: 100,

@@ -13,6 +13,8 @@ export async function getNFTs(
       q: query.q || undefined,
       category:
         query.category === "all" ? undefined : query.category,
+      network:
+        query.network === "all" ? undefined : query.network,
       sort: query.sort === "default" ? undefined : query.sort,
       min: query.min,
       max: query.max,

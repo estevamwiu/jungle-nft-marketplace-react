@@ -134,12 +134,91 @@ function NFTDetailsPage() {
   if (isPending) {
     return (
       <section
-        className="flex min-h-[60vh] items-center justify-center"
+        className="pb-16 pt-8 sm:pt-10"
         role="status"
+        aria-label="Carregando detalhes do NFT..."
       >
-        <p className="text-sm text-kurio-muted">
-          Carregando detalhes do NFT...
-        </p>
+        <div aria-hidden="true">
+          <div className="skeleton-shimmer mb-7 h-4 w-48 bg-kurio-surface" />
+
+          <div className="grid gap-8 lg:grid-cols-[48%_1fr] lg:gap-10">
+            <div className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 sm:grid-cols-[82px_minmax(0,1fr)] sm:gap-5">
+              <div className="flex flex-col gap-3">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <div
+                    key={index}
+                    className="skeleton-shimmer aspect-square rounded-md bg-kurio-surface"
+                  />
+                ))}
+              </div>
+              <div className="skeleton-shimmer relative overflow-hidden rounded-md border border-[#493026] bg-kurio-surface p-3">
+                <div className="skeleton-shimmer aspect-square rounded-xl bg-[#35221a]" />
+              </div>
+            </div>
+
+            <div>
+              <div className="skeleton-shimmer mb-2 h-4 w-20 bg-kurio-surface" />
+              <div className="skeleton-shimmer h-10 w-3/4 bg-kurio-surface" />
+              <div className="mt-5 flex items-center justify-between border-b border-[#493026] pb-5">
+                <div className="skeleton-shimmer h-8 w-28 bg-kurio-surface" />
+                <div className="skeleton-shimmer h-4 w-44 bg-kurio-surface" />
+              </div>
+              <div className="mt-5">
+                <div className="skeleton-shimmer mb-3 h-5 w-36 bg-kurio-surface" />
+                <div className="space-y-2">
+                  <div className="skeleton-shimmer h-4 bg-kurio-surface" />
+                  <div className="skeleton-shimmer h-4 bg-kurio-surface" />
+                  <div className="skeleton-shimmer h-4 w-4/5 bg-kurio-surface" />
+                </div>
+              </div>
+              <div className="mt-6">
+                <div className="skeleton-shimmer mb-3 h-5 w-20 bg-kurio-surface" />
+                <div className="flex gap-2">
+                  <div className="skeleton-shimmer h-7 w-28 rounded-full bg-kurio-surface" />
+                  <div className="skeleton-shimmer h-7 w-20 rounded-full bg-kurio-surface" />
+                  <div className="skeleton-shimmer h-7 w-24 rounded-full bg-kurio-surface" />
+                </div>
+              </div>
+              <div className="mt-8 flex h-10 gap-4">
+                <div className="skeleton-shimmer w-24 bg-kurio-surface" />
+                <div className="skeleton-shimmer flex-1 bg-kurio-surface" />
+              </div>
+              <div className="skeleton-shimmer mt-4 h-10 border-b border-[#493026] bg-kurio-surface" />
+              <div className="mt-5 space-y-3">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <div
+                    key={index}
+                    className="skeleton-shimmer h-4 w-2/3 bg-kurio-surface"
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-16 sm:mt-20">
+            <div className="mb-7 h-8 border-b border-[#493026]">
+              <div className="skeleton-shimmer h-5 w-40 bg-kurio-surface" />
+            </div>
+            <div className="skeleton-shimmer h-48 bg-kurio-surface" />
+          </div>
+
+          <div className="mt-12 sm:mt-16">
+            <div className="mb-7 h-8 border-b border-[#493026]">
+              <div className="skeleton-shimmer h-5 w-44 bg-kurio-surface" />
+            </div>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {Array.from({ length: 5 }, (_, index) => (
+                <div key={index}>
+                  <div className="skeleton-shimmer border border-[#493026] bg-kurio-surface p-3">
+                    <div className="skeleton-shimmer aspect-square rounded-md bg-[#35221a]" />
+                  </div>
+                  <div className="skeleton-shimmer mt-3 h-4 w-3/4 bg-kurio-surface" />
+                  <div className="skeleton-shimmer mt-1 h-4 w-1/3 bg-kurio-surface" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
     )
   }
@@ -292,6 +371,7 @@ function NFTDetailsPage() {
                 <img
                   src={nft.image}
                   alt={nft.name}
+                  fetchPriority="high"
                   className="h-full w-full object-cover"
                 />
 
@@ -299,7 +379,7 @@ function NFTDetailsPage() {
                   type="button"
                   onClick={() => setImageExpanded(true)}
                   aria-label="Ampliar imagem do NFT"
-                  className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-kurio-bg/80 text-kurio-text transition-colors hover:text-kurio-primary"
+                  className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded bg-kurio-bg/80 text-kurio-text transition-colors hover:text-kurio-primary"
                 >
                   <ZoomIn size={19} />
                 </button>
@@ -372,7 +452,7 @@ function NFTDetailsPage() {
                 onClick={() => setQuantity((value) => Math.max(1, value - 1))}
                 disabled={!nft.available || quantity === 1}
                 aria-label="Diminuir quantidade"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-kurio-primary text-kurio-bg transition-opacity disabled:opacity-40"
+                className="flex h-10 w-10 items-center justify-center rounded bg-kurio-primary text-kurio-bg transition-opacity disabled:opacity-40"
               >
                 <Minus size={18} />
               </button>
@@ -393,7 +473,7 @@ function NFTDetailsPage() {
                   quantity >= nft.availableQuantity
                 }
                 aria-label="Aumentar quantidade"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-kurio-primary text-kurio-bg transition-opacity disabled:opacity-40"
+                className="flex h-10 w-10 items-center justify-center rounded bg-kurio-primary text-kurio-bg transition-opacity disabled:opacity-40"
               >
                 <Plus size={18} />
               </button>

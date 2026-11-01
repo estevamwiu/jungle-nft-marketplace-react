@@ -129,6 +129,7 @@
 
   button {
     cursor: pointer;
+    border-radius: 0.25rem;
   }
 
   button:disabled {
@@ -142,6 +143,33 @@
 }
 
 @layer utilities {
+  @keyframes skeleton-shimmer {
+    from {
+      background-position: 100% 0;
+    }
+
+    to {
+      background-position: -100% 0;
+    }
+  }
+
+  .skeleton-shimmer {
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 8%),
+      transparent
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton-shimmer {
+      animation: none;
+    }
+  }
+
   .kurio-container {
     width: 100%;
     max-width: 1232px;

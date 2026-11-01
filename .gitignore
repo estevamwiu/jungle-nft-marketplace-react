@@ -12,6 +12,7 @@ dist-ssr
 *.local
 playwright-report
 test-results
+lighthouse-reports
 
 .vscode/*
 !.vscode/extensions.json

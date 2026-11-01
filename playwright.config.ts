@@ -33,6 +33,15 @@ export default defineConfig({
         deviceScaleFactor: 2,
       },
     },
+    {
+      name: "chromium-tablet",
+      testMatch: "**/visual.spec.ts",
+      use: {
+        viewport: { width: 768, height: 1024 },
+        hasTouch: true,
+        deviceScaleFactor: 2,
+      },
+    },
   ],
   webServer: {
     command: "npm run dev -- --host 127.0.0.1 --port 4173 --strictPort",

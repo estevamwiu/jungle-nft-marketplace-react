@@ -300,6 +300,7 @@ function RootLayout() {
               catalog={{
                 q: "",
                 category: "all",
+                network: "all",
                 sort: "default",
                 page: 1,
               }}

@@ -1,4 +1,5 @@
 export type EthAmount = string
+export type NFTNetwork = "Ethereum" | "Polygon" | "Solana"
 
 export interface NFT {
   id: string
@@ -8,6 +9,7 @@ export interface NFT {
   price: EthAmount
   creator: string
   category: string
+  network?: NFTNetwork
   available: boolean
   availableQuantity: number
 }
@@ -22,6 +24,7 @@ export type NFTSortOrder =
 export interface NFTCatalogQuery {
   q: string
   category: string
+  network?: NFTNetwork | "all"
   sort: NFTSortOrder
   min?: EthAmount
   max?: EthAmount

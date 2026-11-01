@@ -27,7 +27,7 @@ export const Route = createFileRoute("/login")({
 })
 
 const inputClass =
-  "h-[31px] w-full rounded border border-[#493026] bg-[#21130f] px-3 text-[11px] text-[#f4e8d4] outline-none transition-colors placeholder:text-[#a78c70] focus:border-[#d58d49] disabled:opacity-50"
+  "h-[50px] w-full rounded-lg border border-[#493026] bg-[#160e0b] px-4 text-sm text-[#f4e8d4] outline-none transition-colors placeholder:text-[#a78c70] focus:border-[#d58d49] disabled:opacity-50"
 
 function LoginPage() {
   const navigate = useNavigate()
@@ -110,14 +110,14 @@ function LoginPage() {
 
   return (
     <AuthModal mode="login">
-      <p className="mt-7 text-center text-[10px] leading-4 text-[#f4e8d4]">
+      <p className="mt-0 hidden text-center text-[10px] leading-4 text-[#f4e8d4] md:mt-7 md:block">
         Entre para gerenciar sua carteira, coleção e perfil
         de criador.
       </p>
 
       <form
         onSubmit={(event) => void handleSubmit(event)}
-        className="mx-auto mt-5 max-w-[248px] space-y-2"
+        className="mx-auto mt-0 w-full max-w-none space-y-3 md:mt-6 md:max-w-[320px]"
       >
         <label htmlFor="login-email" className="sr-only">
           E-mail
@@ -190,13 +190,13 @@ function LoginPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="mt-2 h-[34px] w-full rounded bg-[#d58d49] text-xs font-bold text-[#160e0b] transition-colors hover:bg-[#e6a15f] disabled:opacity-50"
+          className="mt-3 h-[60px] w-full rounded-lg bg-[#d58d49] text-base font-bold text-[#160e0b] transition-colors hover:bg-[#e6a15f] disabled:opacity-50 md:h-11 md:rounded"
         >
           {isSubmitting ? "Entrando..." : "Entrar"}
         </button>
       </form>
 
-      <p className="mt-4 text-center text-[10px] text-[#a78c70]">
+      <p className="mt-4 hidden text-center text-[10px] text-[#a78c70] md:block">
         Conta demo: demo@jungle.com / 123456
       </p>
     </AuthModal>

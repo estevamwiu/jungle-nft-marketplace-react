@@ -259,20 +259,6 @@ function ProfilePage() {
 
   return (
     <div className="py-10 sm:py-14">
-      <div className="mb-9 border-b border-[#493026] pb-7">
-        <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-kurio-primary">
-          Minha conta
-        </p>
-
-        <h1 className="text-3xl font-black uppercase tracking-tight text-kurio-text sm:text-4xl">
-          Meu perfil
-        </h1>
-
-        <p className="mt-3 text-sm text-kurio-muted">
-          Gerencie as informações do seu perfil de colecionador.
-        </p>
-      </div>
-
       <div className="grid gap-8 lg:grid-cols-[310px_minmax(0,1fr)]">
         <AccountSidebar
           active="profile"

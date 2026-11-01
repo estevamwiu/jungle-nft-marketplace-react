@@ -1,27 +1,38 @@
 import { expect, test } from "@playwright/test"
 
-test("catalog filters, sort, pagination, and browser history", async ({
+test("catalog categories, networks, pagination, and browser history", async ({
   page,
 }) => {
   await page.goto("/?scenario=default")
 
-  const search = page.getByRole("searchbox", {
-    name: "Buscar NFT por nome",
-  })
-  await search.fill("quiet current")
-  await expect(page).toHaveURL(/q=quiet\+current/)
+  await expect(page.getByRole("searchbox")).toHaveCount(0)
+  const filters = page.getByRole("complementary", { name: "Filtros" })
+  await filters.getByRole("button", { name: "Jogos 1" }).click()
+  await expect(page).toHaveURL(/category=Games/)
   await expect(
-    page.getByRole("link", { name: /Quiet Current #019/ })
+    page.getByRole("link", { name: /Pixel Quest #022/ })
   ).toBeVisible()
 
-  await page.getByRole("button", { name: /Photography/ }).click()
-  await expect(page).toHaveURL(/category=Photography/)
+  await filters.getByRole("button", { name: "Ethereum" }).click()
+  await expect(page).toHaveURL(/network=Ethereum/)
   await expect(
-    page.getByRole("button", { name: /Photography/ })
-  ).toHaveAttribute("aria-pressed", "true")
+    page.getByRole("link", { name: /Pixel Quest #022/ })
+  ).toBeVisible()
+  await filters.getByRole("button", { name: "Ethereum" }).click()
+  await expect(page).not.toHaveURL(/network=/)
 
-  await page.getByRole("button", { name: "Todas" }).click()
-  await search.fill("")
+  await filters.getByRole("button", { name: "Todas 29" }).click()
+  await filters.getByRole("button", { name: "Solana" }).click()
+  await expect(page).toHaveURL(/network=Solana/)
+  await expect(
+    page.getByRole("link", { name: /Ivory Baron #052/ })
+  ).toBeVisible()
+  await filters.getByRole("button", { name: "Solana" }).click()
+  await expect(page).not.toHaveURL(/network=/)
+
+  await expect(
+    page.getByRole("button", { name: "Página 4" })
+  ).toBeVisible()
   await page.getByLabel("Ordenar por:").selectOption("price-desc")
   await expect(page).toHaveURL(/sort=price-desc/)
   await page.getByRole("button", { name: "Próxima página" }).click()
@@ -53,10 +64,41 @@ test("catalog latency exposes loading feedback before data arrives", async ({
   page,
 }) => {
   await page.goto("/?scenario=latency")
-  await expect(page.getByText("Carregando NFTs...")).toBeVisible()
+  await expect(page.getByRole("status")).toBeVisible()
+  await expect(page.getByRole("searchbox")).toHaveCount(0)
+  await expect(
+    page.getByRole("heading", { name: "Coleções", exact: true })
+  ).toBeVisible()
+  await expect(page.getByRole("button", { name: "Fotografia 4" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Rede", exact: true })
+  ).toBeVisible()
   await expect(
     page.getByRole("link", { name: /Emerald Ape #042/ }).first()
   ).toBeVisible()
+})
+
+test("NFT details and cart quote expose skeletons during latency", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.goto("/nft/1?scenario=latency", { waitUntil: "commit" })
+  const detailLoadingStatus = page.getByRole("status", {
+    name: "Carregando detalhes do NFT...",
+  })
+  await expect(detailLoadingStatus).toBeVisible()
+  await expect(
+    page.locator(".skeleton-shimmer").first()
+  ).toHaveCSS("animation-name", "none")
+  await page.getByRole("button", { name: "Adicionar ao carrinho" }).click()
+
+  await page.goto("/cart?scenario=latency", { waitUntil: "commit" })
+  const quoteLoadingStatus = page.getByRole("status", {
+    name: "Calculando resumo do carrinho...",
+  })
+  await expect(quoteLoadingStatus).toBeVisible()
+  await expect(quoteLoadingStatus).toBeHidden()
+  await expect(page.getByText("Cotação válida até")).toBeVisible()
 })
 
 test("catalog failure can be recovered after returning to the default scenario", async ({

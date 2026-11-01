@@ -1,5 +1,5 @@
 
-import { ArrowUpRight } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import { useNFTs } from "@/features/nft/hooks/use.nfts"
 
 const articles = [
@@ -61,12 +61,12 @@ export function MintingJournal() {
           const image =
             nfts.length > 0
               ? nfts[index % nfts.length].image
-              : "/images/monkey-hero.png"
+              : "/images/emerald-ape.webp"
 
           return (
             <article
               key={article.title}
-              className="group overflow-hidden border border-[#493026] bg-kurio-surface"
+              className="group overflow-hidden rounded-2xl border border-[#493026] bg-kurio-surface"
             >
               <div className="aspect-[4/3] overflow-hidden bg-[#35221a]">
                 <img
@@ -97,8 +97,8 @@ export function MintingJournal() {
                 </p>
 
                 <span className="mt-5 inline-flex items-center gap-2 text-xs font-bold text-kurio-primary">
-                  Em breve
-                  <ArrowUpRight size={14} />
+                  Ler mais
+                  <ArrowRight size={14} />
                 </span>
               </div>
             </article>
