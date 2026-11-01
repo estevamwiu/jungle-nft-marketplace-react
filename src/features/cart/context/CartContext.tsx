@@ -1,11 +1,11 @@
 
 import {
-  createContext,
   useEffect,
   useCallback,
   useReducer,
   type ReactNode,
 } from "react"
+import { CartContext } from "./CartContextValue"
 
 import type { NFT } from "@/features/nft/types"
 import type {
@@ -18,25 +18,6 @@ import {
   multiplyEth,
   sumEth,
 } from "@/lib/money"
-
-interface CartContextValue {
-  items: CartItem[]
-  addItem: (nft: NFT) => void
-  updateNFT: (
-    nft: Pick<
-      NFT,
-      "id" | "price" | "available" | "availableQuantity"
-    >
-  ) => void
-  removeItem: (id: string) => void
-  updateQuantity: (id: string, quantity: number) => void
-  clearCart: () => void
-  totalItems: number
-  totalPrice: string
-}
-
-export const CartContext =
-  createContext<CartContextValue | undefined>(undefined)
 
 const STORAGE_KEY = "jungle-nft-cart"
 

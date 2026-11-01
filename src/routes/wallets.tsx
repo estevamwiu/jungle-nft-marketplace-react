@@ -454,7 +454,7 @@ function WalletsPage() {
   }
 
   return (
-    <div className="grid gap-8 pb-10 pt-8 lg:grid-cols-[310px_minmax(0,1fr)] lg:gap-7">
+    <div className="grid min-w-0 grid-cols-1 gap-8 pb-10 pt-8 lg:grid-cols-[310px_minmax(0,1fr)] lg:gap-7">
       <AccountSidebar active="wallets" onLogout={() => void handleLogout()} />
 
       <div className="min-w-0 space-y-10">

@@ -120,11 +120,11 @@ export function Footer() {
 
   return (
     <footer className="kurio-container mt-20 text-kurio-text">
-      <div className="grid gap-8 bg-kurio-surface px-6 py-8 sm:grid-cols-2 md:px-12 xl:grid-cols-[1fr_1fr_1fr_1.25fr] xl:gap-0">
+      <div className="grid min-w-0 grid-cols-1 gap-8 bg-kurio-surface px-6 py-8 sm:grid-cols-2 md:px-12 xl:grid-cols-[1fr_1fr_1fr_1.25fr] xl:gap-0">
         {highlights.map((item) => (
           <div
             key={item.letter}
-            className="xl:border-r xl:border-[#80502e] xl:px-6 xl:first:pl-0"
+            className="min-w-0 xl:border-r xl:border-[#80502e] xl:px-6 xl:first:pl-0"
           >
             <div
               aria-hidden="true"
@@ -141,7 +141,7 @@ export function Footer() {
           </div>
         ))}
 
-        <div className="xl:pl-6">
+        <div className="min-w-0 xl:pl-6">
           <h3 className="mb-3 max-w-[14rem] text-lg font-bold leading-tight">
             Antecipe-se ao próximo lançamento
           </h3>
@@ -160,7 +160,7 @@ export function Footer() {
                 setEmail(event.target.value)
                 setNewsletterMessage("")
               }}
-              className="min-w-[180px] flex-1 rounded-l bg-[#38200f] px-4 py-3 text-sm text-kurio-text outline-none placeholder:text-kurio-muted focus:outline-2 focus:outline-kurio-primary"
+              className="min-w-0 flex-1 rounded-l bg-[#38200f] px-4 py-3 text-sm text-kurio-text outline-none placeholder:text-kurio-muted focus:outline-2 focus:outline-kurio-primary"
             />
 
             <button
@@ -184,7 +184,7 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="grid gap-5 bg-[#38200f] px-6 py-8 text-sm sm:grid-cols-2 md:px-8 lg:grid-cols-4 lg:items-center">
+      <div className="grid min-w-0 grid-cols-1 gap-5 bg-[#38200f] px-6 py-8 text-sm sm:grid-cols-2 md:px-8 lg:grid-cols-4 lg:items-center">
         <Link to="/" className="font-bold tracking-[0.15em]">
           KURIO
         </Link>
@@ -198,7 +198,7 @@ export function Footer() {
         <span>+55 11 4002 8922</span>
       </div>
 
-      <div className="grid gap-10 bg-kurio-surface px-6 py-10 sm:grid-cols-2 md:px-8 lg:grid-cols-4">
+      <div className="grid min-w-0 grid-cols-1 gap-10 bg-kurio-surface px-6 py-10 sm:grid-cols-2 md:px-8 lg:grid-cols-4">
         <div>
           <h3 className={headingClass}>Meu perfil</h3>
 

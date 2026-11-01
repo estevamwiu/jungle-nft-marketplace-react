@@ -7,6 +7,12 @@ test("catalog categories, networks, pagination, and browser history", async ({
 
   await expect(page.getByRole("searchbox")).toHaveCount(0)
   const filters = page.getByRole("complementary", { name: "Filtros" })
+  const mobileFilterToggle = page.getByRole("button", {
+    name: "Filtros do catálogo",
+  })
+  if ((await page.viewportSize())!.width < 1024) {
+    await mobileFilterToggle.click()
+  }
   await filters.getByRole("button", { name: "Jogos 1" }).click()
   await expect(page).toHaveURL(/category=Games/)
   await expect(
@@ -66,12 +72,21 @@ test("catalog latency exposes loading feedback before data arrives", async ({
   await page.goto("/?scenario=latency")
   await expect(page.getByRole("status")).toBeVisible()
   await expect(page.getByRole("searchbox")).toHaveCount(0)
+  const filters = page.getByRole("complementary", { name: "Filtros" })
+  if ((await page.viewportSize())!.width < 1024) {
+    const mobileFilterToggle = page.getByRole("button", {
+      name: "Filtros do catálogo",
+    })
+    await mobileFilterToggle.click()
+  }
   await expect(
-    page.getByRole("heading", { name: "Coleções", exact: true })
+    filters.getByRole("heading", { name: "Coleções", exact: true })
   ).toBeVisible()
-  await expect(page.getByRole("button", { name: "Fotografia 4" })).toBeVisible()
   await expect(
-    page.getByRole("heading", { name: "Rede", exact: true })
+    filters.getByRole("button", { name: "Fotografia 4" })
+  ).toBeVisible()
+  await expect(
+    filters.getByRole("heading", { name: "Rede", exact: true })
   ).toBeVisible()
   await expect(
     page.getByRole("link", { name: /Emerald Ape #042/ }).first()

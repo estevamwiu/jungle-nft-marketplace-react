@@ -1,6 +1,5 @@
 
 import {
-  createContext,
   useEffect,
   useRef,
   useState,
@@ -8,24 +7,14 @@ import {
 } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 
-import type { User, LoginCredentials } from "../types"
+import type { LoginCredentials, User } from "../types"
+import { AuthContext } from "./AuthContext"
 
 import {
   loginRequest,
   getCurrentUser,
   logoutRequest,
 } from "../api/auth-api"
-
-interface AuthContextValue {
-  user: User | null
-  isAuthenticated: boolean
-  isLoading: boolean
-  login: (credentials: LoginCredentials) => Promise<boolean>
-  logout: () => Promise<void>
-}
-
-export const AuthContext =
-  createContext<AuthContextValue | undefined>(undefined)
 
 const STORAGE_KEY = "jungle-auth-token"
 

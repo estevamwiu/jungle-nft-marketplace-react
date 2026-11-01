@@ -259,7 +259,7 @@ function ProfilePage() {
 
   return (
     <div className="py-10 sm:py-14">
-      <div className="grid gap-8 lg:grid-cols-[310px_minmax(0,1fr)]">
+      <div className="grid min-w-0 grid-cols-1 gap-8 lg:grid-cols-[310px_minmax(0,1fr)]">
         <AccountSidebar
           active="profile"
           onLogout={() => void handleLogout()}

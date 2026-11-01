@@ -119,6 +119,7 @@ export function HomePage({
   const featuredSlides = nfts.slice(0, 3)
   const heroNFT = featuredSlides[slide] ?? featuredSlides[0]
   const offerNFT = nfts[1] ?? nfts[0]
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
   function scrollToMarketplace() {
     document.getElementById("marketplace")?.scrollIntoView({
@@ -127,7 +128,6 @@ export function HomePage({
     })
   }
 
-  // Toda mudança de filtro reinicia a paginação.
   function changeCategory(value: string) {
     onCatalogChange({ category: value, page: 1 })
   }
@@ -180,51 +180,57 @@ export function HomePage({
 
   return (
     <div className="w-full">
-      <section className="grid items-center gap-10 py-10 lg:grid-cols-2 lg:py-12">
-        <div className="max-w-xl">
-          <p className="text-xs text-kurio-text">Bem-vindo à Kurio</p>
+      <section className="relative grid min-h-[220px] items-center gap-10 overflow-hidden rounded-xl border border-[#493026] bg-kurio-surface px-5 py-5 sm:min-h-[250px] lg:min-h-0 lg:grid-cols-2 lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0 lg:py-12">
+        <div className="relative z-10 w-[68%] max-w-xl lg:w-full">
+          <p className="text-[10px] text-kurio-text lg:text-xs">
+            Bem-vindo à Kurio
+          </p>
 
-          <h1 className="mt-5 text-4xl font-bold uppercase leading-[1.5] text-kurio-text lg:text-[2.75rem]">
-            Seja dono do futuro da arte digital
+          <h1 className="mt-4 text-[1.4rem] font-bold uppercase leading-[1.2] text-kurio-text sm:text-3xl lg:mt-5 lg:text-[2.75rem] lg:leading-[1.5]">
+            Seja dono da cultura digital
           </h1>
 
-          <p className="mt-5 max-w-md text-sm leading-6 text-kurio-muted">
-            Descubra NFTs selecionados de criadores emergentes e
-            consagrados. Colecione arte digital rara, apoie artistas e
-            tenha uma parte da cultura da internet.
+          <p className="mt-3 max-w-md text-[10px] leading-4 text-kurio-muted sm:text-xs lg:mt-5 lg:text-sm lg:leading-6">
+            Descubra coleções digitais exclusivas e encontre a próxima
+            peça da sua coleção.
           </p>
 
           <button
             type="button"
             onClick={scrollToMarketplace}
-            className="mt-7 rounded bg-kurio-primary px-6 py-3 text-xs font-bold uppercase text-kurio-bg transition-colors hover:bg-[#e6a15f]"
+            className="mt-4 rounded bg-kurio-primary px-4 py-2 text-[10px] font-bold uppercase text-kurio-bg transition-colors hover:bg-[#e6a15f] lg:mt-7 lg:px-6 lg:py-3 lg:text-xs"
           >
             Explorar
           </button>
 
         </div>
 
-        <div className="w-full justify-self-center lg:justify-self-end">
+        <div className="absolute inset-y-0 right-0 w-[52%] lg:relative lg:inset-auto lg:w-full lg:justify-self-end">
           {heroNFT ? (
-            <div className="relative mx-auto w-full max-w-[450px] lg:ml-auto lg:mr-0">
+            <div className="relative h-full w-full lg:mx-auto lg:aspect-square lg:h-auto lg:max-w-[450px] lg:ml-auto lg:mr-0">
               <Link
                 to="/nft/$id"
                 params={{ id: heroNFT.id }}
-                className="block aspect-square w-full overflow-hidden rounded-2xl bg-[#35221a]"
+                className="block h-full w-full overflow-hidden bg-[#35221a] lg:aspect-square lg:rounded-2xl"
               >
                 <img
                   src={heroNFT.image}
                   alt={`${heroNFT.name} em destaque`}
                   fetchPriority="high"
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-cover object-[center_30%]"
                 />
               </Link>
+
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-kurio-surface via-kurio-surface/25 to-transparent lg:hidden"
+              />
 
               {featuredSlides.length > 1 && (
                 <div
                   role="group"
                   aria-label="Destaques da página inicial"
-                  className="mt-4 flex justify-center gap-2 lg:absolute lg:right-full lg:top-[88%] lg:mr-8 lg:mt-0 lg:-translate-y-1/2"
+                  className="absolute bottom-3 right-3 flex justify-center gap-1 lg:static lg:mt-4 lg:gap-2"
                 >
                   {featuredSlides.map((item, index) => (
                     <button
@@ -233,7 +239,7 @@ export function HomePage({
                       aria-label={`Mostrar destaque ${item.name}`}
                       aria-current={index === slide}
                       onClick={() => setSlide(index)}
-                      className="flex h-6 w-6 items-center justify-center rounded"
+                      className="flex h-5 w-5 items-center justify-center rounded lg:h-6 lg:w-6"
                     >
                       <span
                         className={`h-2.5 w-2.5 rounded-full ${
@@ -248,7 +254,7 @@ export function HomePage({
               )}
             </div>
           ) : (
-            <div className="skeleton-shimmer aspect-square w-full max-w-[450px] rounded-2xl bg-kurio-surface" />
+            <div className="skeleton-shimmer h-full w-full max-w-[450px] bg-kurio-surface lg:aspect-square lg:h-auto lg:rounded-2xl" />
           )}
         </div>
       </section>
@@ -293,7 +299,7 @@ export function HomePage({
                 <div className="skeleton-shimmer h-5 w-44 bg-kurio-surface" />
               </div>
 
-              <div className="grid gap-x-7 gap-y-10 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-7 sm:gap-y-10 xl:grid-cols-3">
                 {Array.from({ length: 9 }, (_, index) => (
                   <div key={index}>
                     <div className="skeleton-shimmer bg-kurio-surface px-4 pb-8 pt-5">
@@ -332,7 +338,29 @@ export function HomePage({
         ) : (
           <div className="grid gap-12 lg:grid-cols-[310px_minmax(0,1fr)]">
             <aside aria-label="Filtros">
-              <div className="bg-kurio-surface px-5 py-5">
+              <button
+                type="button"
+                aria-expanded={mobileFiltersOpen}
+                aria-controls="marketplace-filters"
+                onClick={() => setMobileFiltersOpen((open) => !open)}
+                className="mb-4 flex w-full items-center justify-between border border-[#493026] bg-kurio-surface px-4 py-3 text-sm font-bold text-kurio-text lg:hidden"
+              >
+                Filtros do catálogo
+                <ChevronDown
+                  size={16}
+                  aria-hidden="true"
+                  className={`transition-transform ${
+                    mobileFiltersOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              <div
+                id="marketplace-filters"
+                className={`${
+                  mobileFiltersOpen ? "block" : "hidden lg:block"
+                } bg-kurio-surface px-5 py-5`}
+              >
                 <h2 className="text-base font-bold text-kurio-text">
                   Coleções
                 </h2>
@@ -460,7 +488,7 @@ export function HomePage({
                 <Link
                   to="/nft/$id"
                   params={{ id: offerNFT.id }}
-                  className="mt-8 block bg-[#2a1a10] pt-5"
+                  className="mt-8 hidden bg-[#2a1a10] pt-5 lg:block"
                 >
                   <p className="px-5 text-xl font-bold uppercase text-kurio-primary">
                     NFT em destaque
@@ -558,7 +586,7 @@ export function HomePage({
                 </div>
               ) : (
                 <>
-                  <div className="grid gap-x-7 gap-y-10 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-7 sm:gap-y-10 xl:grid-cols-3">
                     {visibleNFTs.map((nft) => (
                       <NFTCard key={nft.id} nft={nft} />
                     ))}

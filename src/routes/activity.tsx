@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import {
   ShoppingBag,
@@ -9,10 +9,7 @@ import {
 
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { AccountSidebar } from "@/components/account/AccountSidebar"
-import {
-  getOrders,
-  type SavedOrder,
-} from "@/features/activity/order-storage"
+import { getOrders } from "@/features/activity/order-storage"
 import { formatEth, multiplyEth, sumEth } from "@/lib/money"
 
 export const Route = createFileRoute("/activity")({
@@ -23,8 +20,11 @@ function ActivityPage() {
   const navigate = useNavigate()
   const { user, isAuthenticated, isLoading, logout } = useAuth()
 
-  const [orders, setOrders] = useState<SavedOrder[]>([])
-  const [loadedUserId, setLoadedUserId] = useState<string | null>(null)
+  const userId = user?.id
+  const orders = useMemo(
+    () => (userId ? getOrders(userId) : []),
+    [userId]
+  )
   const [filter, setFilter] = useState<"all" | "completed">("all")
 
   useEffect(() => {
@@ -33,23 +33,12 @@ function ActivityPage() {
     }
   }, [isLoading, isAuthenticated, navigate])
 
-  useEffect(() => {
-    if (!user) {
-      setOrders([])
-      setLoadedUserId(null)
-      return
-    }
-
-    setOrders(getOrders(user.id))
-    setLoadedUserId(user.id)
-  }, [user])
-
   async function handleLogout() {
     await logout()
     await navigate({ to: "/" })
   }
 
-  if (isLoading || !isAuthenticated || !user || loadedUserId !== user.id) {
+  if (isLoading || !isAuthenticated || !user) {
     return (
       <div
         role="status"
@@ -93,7 +82,7 @@ function ActivityPage() {
         </p>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[310px_minmax(0,1fr)]">
+      <div className="grid min-w-0 grid-cols-1 gap-8 lg:grid-cols-[310px_minmax(0,1fr)]">
         <AccountSidebar
           active="activity"
           onLogout={() => void handleLogout()}

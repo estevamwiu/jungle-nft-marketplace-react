@@ -49,7 +49,7 @@ test("marketplace home visual baseline", async ({ page }) => {
   await page.goto("/?scenario=default")
   await expect(
     page.getByRole("heading", {
-      name: "Seja dono do futuro da arte digital",
+      name: "Seja dono da cultura digital",
     })
   ).toBeVisible()
   await expect(
@@ -87,6 +87,12 @@ test("marketplace catalog visual baseline", async ({ page }) => {
     )
     .toBe(96)
   await expect(page.getByRole("searchbox")).toHaveCount(0)
+  const mobileFilterToggle = page.getByRole("button", {
+    name: "Filtros do catálogo",
+  })
+  if ((await page.viewportSize())!.width < 1024) {
+    await mobileFilterToggle.click()
+  }
   await expect(
     page.getByRole("button", { name: "Fotografia 4" })
   ).toBeVisible()
@@ -96,6 +102,9 @@ test("marketplace catalog visual baseline", async ({ page }) => {
   await expect(
     page.getByRole("link", { name: /Emerald Ape #042/ }).first()
   ).toBeVisible()
+  if ((await page.viewportSize())!.width < 1024) {
+    await mobileFilterToggle.click()
+  }
   await waitForViewportAssets(page)
 
   await expect(page).toHaveScreenshot("marketplace-catalog.png", {
