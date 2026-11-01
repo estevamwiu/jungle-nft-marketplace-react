@@ -1,5 +1,4 @@
-
-import { useEffect, useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent, type ChangeEvent } from "react"
 import {
   createFileRoute,
   Link,
@@ -20,37 +19,29 @@ import {
   Trash2,
   Save,
 } from "lucide-react"
-
 import { useAuth } from "@/features/auth/hooks/use-auth"
-
 export const Route = createFileRoute("/profile")({
   component: ProfilePage,
 })
-
 interface ProfileData {
   displayName: string
   username: string
   ensName: string
   walletNickname: string
 }
-
 const inputClass =
   "h-11 w-full rounded border border-[#493026] bg-[#21130f] px-4 text-sm text-kurio-text outline-none transition-colors placeholder:text-kurio-muted focus:border-kurio-primary disabled:cursor-not-allowed disabled:opacity-60"
-
 const labelClass =
   "mb-2 block text-xs font-semibold text-kurio-text"
-
 function ProfilePage() {
   const navigate = useNavigate()
   const { user, isAuthenticated, isLoading, logout } = useAuth()
-
   const [profile, setProfile] = useState<ProfileData>({
     displayName: "",
     username: "",
     ensName: "",
     walletNickname: "",
   })
-
   const [avatar, setAvatar] = useState<string | null>(null)
   const [showCurrentPassword, setShowCurrentPassword] =
     useState(false)
@@ -58,7 +49,6 @@ function ProfilePage() {
   const [showConfirmPassword, setShowConfirmPassword] =
     useState(false)
   const [saved, setSaved] = useState(false)
-
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       void navigate({
@@ -67,17 +57,13 @@ function ProfilePage() {
       })
     }
   }, [isAuthenticated, isLoading, navigate])
-
   useEffect(() => {
     if (!user) return
-
     const storageKey = `kurio-profile-${user.id}`
     const storedProfile = localStorage.getItem(storageKey)
-
     if (storedProfile) {
       try {
         const parsed = JSON.parse(storedProfile) as Partial<ProfileData>
-
         setProfile({
           displayName: parsed.displayName ?? user.name,
           username: parsed.username ?? "",
@@ -101,21 +87,16 @@ function ProfilePage() {
       })
     }
   }, [user])
-
   function updateProfile(field: keyof ProfileData, value: string) {
     setProfile((current) => ({
       ...current,
       [field]: value,
     }))
-
     setSaved(false)
   }
-
   function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-
     if (!user) return
-
     localStorage.setItem(
       `kurio-profile-${user.id}`,
       JSON.stringify({
@@ -125,41 +106,31 @@ function ProfilePage() {
         walletNickname: profile.walletNickname.trim(),
       })
     )
-
     setSaved(true)
   }
-
   function handleAvatarChange(
-    event: React.ChangeEvent<HTMLInputElement>
+    event: ChangeEvent<HTMLInputElement>
   ) {
     const file = event.target.files?.[0]
-
     if (!file) return
-
     if (!file.type.startsWith("image/")) {
       return
     }
-
     if (file.size > 2 * 1024 * 1024) {
       return
     }
-
     const reader = new FileReader()
-
     reader.onload = () => {
       if (typeof reader.result === "string") {
         setAvatar(reader.result)
       }
     }
-
     reader.readAsDataURL(file)
   }
-
   async function handleLogout() {
     await logout()
     await navigate({ to: "/" })
   }
-
   if (isLoading || !isAuthenticated || !user) {
     return (
       <div
@@ -170,30 +141,25 @@ function ProfilePage() {
       </div>
     )
   }
-
   const initials = (profile.displayName || user.name)
     .split(" ")
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0].toUpperCase())
     .join("")
-
   return (
     <div className="py-10 sm:py-14">
       <div className="mb-9 border-b border-[#493026] pb-7">
         <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-kurio-primary">
           Minha conta
         </p>
-
         <h1 className="text-3xl font-black uppercase tracking-tight text-kurio-text sm:text-4xl">
           Meu perfil
         </h1>
-
         <p className="mt-3 text-sm text-kurio-muted">
           Gerencie as informações do seu perfil de colecionador.
         </p>
       </div>
-
       <div className="grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="self-start border border-[#493026] bg-kurio-surface p-4 lg:sticky lg:top-24">
           <nav
@@ -208,40 +174,30 @@ function ProfilePage() {
               <UserRound size={17} />
               Dados do perfil
             </Link>
-
-            <span
-              title="Disponível na próxima etapa"
-              className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70"
-            >
+            <Link to="/wallets" className="flex items-center gap-3 px-4 py-3 text-xs text-kurio-muted transition-colors hover:bg-kurio-bg hover:text-kurio-primary">
               <Wallet size={17} />
               Carteiras
-            </span>
-
+            </Link>
             <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
               <Activity size={17} />
               Atividade
             </span>
-
             <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
               <Heart size={17} />
               Lista de interesse
             </span>
-
             <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
               <Bookmark size={17} />
               Ofertas
             </span>
-
             <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
               <Download size={17} />
               Arquivos baixados
             </span>
-
             <span className="flex cursor-not-allowed items-center gap-3 px-4 py-3 text-xs text-kurio-muted opacity-70">
               <HelpCircle size={17} />
               Suporte
             </span>
-
             <div className="mt-3 border-t border-[#493026] pt-3">
               <button
                 type="button"
@@ -254,19 +210,16 @@ function ProfilePage() {
             </div>
           </nav>
         </aside>
-
         <div className="min-w-0 space-y-8">
           <section className="border border-[#493026] bg-kurio-surface p-5 sm:p-8">
             <div className="mb-8 border-b border-[#493026] pb-6">
               <h2 className="text-lg font-bold uppercase text-kurio-text">
                 Perfil do colecionador
               </h2>
-
               <p className="mt-2 text-xs leading-6 text-kurio-muted">
                 Personalize as informações exibidas no seu perfil.
               </p>
             </div>
-
             <form onSubmit={handleSave}>
               <div className="grid gap-x-6 gap-y-6 md:grid-cols-2">
                 <div>
@@ -276,7 +229,6 @@ function ProfilePage() {
                   >
                     Nome de exibição
                   </label>
-
                   <input
                     id="profile-display-name"
                     type="text"
@@ -293,7 +245,6 @@ function ProfilePage() {
                     className={inputClass}
                   />
                 </div>
-
                 <div>
                   <label
                     htmlFor="profile-username"
@@ -301,7 +252,6 @@ function ProfilePage() {
                   >
                     Nome de usuário
                   </label>
-
                   <input
                     id="profile-username"
                     type="text"
@@ -317,7 +267,6 @@ function ProfilePage() {
                     className={inputClass}
                   />
                 </div>
-
                 <div>
                   <label
                     htmlFor="profile-email"
@@ -325,7 +274,6 @@ function ProfilePage() {
                   >
                     E-mail
                   </label>
-
                   <input
                     id="profile-email"
                     type="email"
@@ -333,12 +281,10 @@ function ProfilePage() {
                     readOnly
                     className={`${inputClass} cursor-not-allowed opacity-70`}
                   />
-
                   <p className="mt-2 text-[11px] text-kurio-muted">
                     E-mail vinculado à sua conta.
                   </p>
                 </div>
-
                 <div>
                   <label
                     htmlFor="profile-ens"
@@ -346,7 +292,6 @@ function ProfilePage() {
                   >
                     Nome ENS
                   </label>
-
                   <div className="flex">
                     <input
                       id="profile-ens"
@@ -362,13 +307,11 @@ function ProfilePage() {
                       maxLength={80}
                       className={`${inputClass} rounded-r-none`}
                     />
-
                     <span className="flex h-11 items-center border border-l-0 border-[#493026] bg-[#35221a] px-4 text-xs text-kurio-muted">
                       .eth
                     </span>
                   </div>
                 </div>
-
                 <div>
                   <label
                     htmlFor="profile-wallet"
@@ -376,7 +319,6 @@ function ProfilePage() {
                   >
                     Apelido da carteira
                   </label>
-
                   <input
                     id="profile-wallet"
                     type="text"
@@ -392,10 +334,8 @@ function ProfilePage() {
                     className={inputClass}
                   />
                 </div>
-
                 <div>
                   <span className={labelClass}>Avatar</span>
-
                   <div className="flex flex-wrap items-center gap-4">
                     <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#704b35] bg-[#35221a] text-lg font-bold text-kurio-primary">
                       {avatar ? (
@@ -408,12 +348,10 @@ function ProfilePage() {
                         initials || <UserRound size={25} />
                       )}
                     </div>
-
                     <div className="flex flex-wrap gap-2">
                       <label className="inline-flex cursor-pointer items-center gap-2 border border-[#704b35] px-3 py-2 text-xs text-kurio-text transition-colors hover:border-kurio-primary">
                         <ImagePlus size={15} />
                         Alterar
-
                         <input
                           type="file"
                           accept="image/*"
@@ -421,7 +359,6 @@ function ProfilePage() {
                           className="sr-only"
                         />
                       </label>
-
                       <button
                         type="button"
                         onClick={() => setAvatar(null)}
@@ -433,20 +370,17 @@ function ProfilePage() {
                       </button>
                     </div>
                   </div>
-
                   <p className="mt-2 text-[11px] text-kurio-muted">
                     Prévia temporária. Imagem de até 2 MB.
                   </p>
                 </div>
               </div>
-
               <div className="mt-8 border-t border-[#493026] pt-6">
                 <p className="text-xs leading-6 text-kurio-muted">
                   Os dados personalizados são salvos apenas neste
                   navegador. A atualização da conta no servidor
                   ainda não está disponível.
                 </p>
-
                 {saved && (
                   <p
                     role="status"
@@ -455,7 +389,6 @@ function ProfilePage() {
                     Preferências salvas neste navegador.
                   </p>
                 )}
-
                 <button
                   type="submit"
                   className="mt-5 inline-flex h-11 items-center justify-center gap-2 bg-kurio-primary px-7 text-xs font-bold uppercase tracking-wide text-kurio-bg transition-colors hover:bg-[#e6a15f]"
@@ -466,19 +399,16 @@ function ProfilePage() {
               </div>
             </form>
           </section>
-
           <section className="border border-[#493026] bg-kurio-surface p-5 sm:p-8">
             <div className="mb-7 border-b border-[#493026] pb-6">
               <h2 className="text-lg font-bold uppercase text-kurio-text">
                 Alterar senha
               </h2>
-
               <p className="mt-2 text-xs leading-6 text-kurio-muted">
                 A alteração de senha estará disponível quando
                 a API oferecer essa operação.
               </p>
             </div>
-
             <div className="grid gap-6 md:grid-cols-2">
               <div>
                 <label
@@ -487,7 +417,6 @@ function ProfilePage() {
                 >
                   Senha atual
                 </label>
-
                 <div className="relative">
                   <input
                     id="current-password"
@@ -500,7 +429,6 @@ function ProfilePage() {
                     disabled
                     className={`${inputClass} pr-11`}
                   />
-
                   <button
                     type="button"
                     onClick={() =>
@@ -518,7 +446,6 @@ function ProfilePage() {
                   </button>
                 </div>
               </div>
-
               <div>
                 <label
                   htmlFor="new-password"
@@ -526,7 +453,6 @@ function ProfilePage() {
                 >
                   Nova senha
                 </label>
-
                 <div className="relative">
                   <input
                     id="new-password"
@@ -535,7 +461,6 @@ function ProfilePage() {
                     disabled
                     className={`${inputClass} pr-11`}
                   />
-
                   <button
                     type="button"
                     onClick={() =>
@@ -553,7 +478,6 @@ function ProfilePage() {
                   </button>
                 </div>
               </div>
-
               <div>
                 <label
                   htmlFor="confirm-new-password"
@@ -561,7 +485,6 @@ function ProfilePage() {
                 >
                   Confirmar nova senha
                 </label>
-
                 <div className="relative">
                   <input
                     id="confirm-new-password"
@@ -574,7 +497,6 @@ function ProfilePage() {
                     disabled
                     className={`${inputClass} pr-11`}
                   />
-
                   <button
                     type="button"
                     onClick={() =>
@@ -593,7 +515,6 @@ function ProfilePage() {
                 </div>
               </div>
             </div>
-
             <button
               type="button"
               disabled
