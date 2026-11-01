@@ -1,5 +1,5 @@
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { isAxiosError } from "axios"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -38,6 +38,7 @@ function NFTDetailsPage() {
   const [activeTab, setActiveTab] = useState<"details" | "reviews">("details")
   const [imageExpanded, setImageExpanded] = useState(false)
   const [addedToCart, setAddedToCart] = useState(false)
+  const imageCloseButtonRef = useRef<HTMLButtonElement>(null)
   const token = localStorage.getItem("jungle-auth-token")
   const favoritesKey = ["favorites", user?.id]
   const favoritesQuery = useQuery({
@@ -90,6 +91,35 @@ function NFTDetailsPage() {
       queryClient.invalidateQueries({ queryKey: favoritesKey }),
   })
   const isFavorite = favoritesQuery.data?.includes(id) ?? false
+
+  useEffect(() => {
+    if (!imageExpanded) {
+      return
+    }
+
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null
+
+    imageCloseButtonRef.current?.focus()
+
+    function handleDialogKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setImageExpanded(false)
+      } else if (event.key === "Tab") {
+        event.preventDefault()
+        imageCloseButtonRef.current?.focus()
+      }
+    }
+
+    document.addEventListener("keydown", handleDialogKeyDown)
+
+    return () => {
+      document.removeEventListener("keydown", handleDialogKeyDown)
+      previouslyFocused?.focus()
+    }
+  }, [imageExpanded])
 
   const {
     data: nft,
@@ -589,7 +619,9 @@ function NFTDetailsPage() {
         >
           <button
             type="button"
+            ref={imageCloseButtonRef}
             onClick={() => setImageExpanded(false)}
+            aria-label="Fechar imagem ampliada"
             className="absolute right-6 top-6 border border-[#704b35] px-4 py-2 text-sm font-bold text-kurio-text hover:text-kurio-primary"
           >
             Fechar

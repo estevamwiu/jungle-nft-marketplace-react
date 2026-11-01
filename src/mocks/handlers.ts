@@ -6,6 +6,10 @@ import {
 } from "./order-store"
 import { mockNfts } from "./nft-store"
 import { calculateMockQuote } from "./quote-store"
+import {
+  getMockScenario,
+  waitForMockLatency,
+} from "./scenarios"
 import type {
   ProfileData,
   StoredWallets,
@@ -106,6 +110,15 @@ const DEMO_USER: MockUser = {
     "7ea1e7d46fc84500e5df25ca244cad255ece618f523ab60be4dda7e691f3076f",
 }
 
+const SECOND_DEMO_USER: MockUser = {
+  id: "2",
+  name: "Colecionador Demo",
+  email: "collector@jungle.com",
+  passwordSalt: "kurio-collector-user-v1",
+  passwordHash:
+    "a39bf7d8c28ad7925d05ab688fff177655d1d35725a2609bf8edbe5f352cf03b",
+}
+
 function isMockUser(value: unknown): value is MockUser {
   return (
     isRecord(value) &&
@@ -150,7 +163,7 @@ function readStoredUsers(): MockUser[] {
     const stored = localStorage.getItem(USERS_STORAGE_KEY)
 
     if (!stored) {
-      return [DEMO_USER]
+      return [DEMO_USER, SECOND_DEMO_USER]
     }
 
     const parsed: unknown = JSON.parse(stored)
@@ -158,7 +171,7 @@ function readStoredUsers(): MockUser[] {
     if (!Array.isArray(parsed)) {
       localStorage.removeItem(USERS_STORAGE_KEY)
       console.error("[MSW] O armazenamento de usuários não é uma lista.")
-      return [DEMO_USER]
+      return [DEMO_USER, SECOND_DEMO_USER]
     }
 
     const validUsers = parsed.filter(isMockUser).map(
@@ -176,20 +189,24 @@ function readStoredUsers(): MockUser[] {
       localStorage.setItem(USERS_STORAGE_KEY, serialized)
     }
 
-    const demoUser =
-      validUsers.find((user) => user.email === DEMO_USER.email) ??
-      DEMO_USER
-
+    const defaults = [DEMO_USER, SECOND_DEMO_USER]
     return [
-      demoUser,
+      ...defaults.map(
+        (defaultUser) =>
+          validUsers.find((user) => user.email === defaultUser.email) ??
+          defaultUser
+      ),
       ...validUsers.filter(
-        (user) => user.email !== DEMO_USER.email
+        (user) =>
+          !defaults.some(
+            (defaultUser) => defaultUser.email === user.email
+          )
       ),
     ]
   } catch (error) {
     localStorage.removeItem(USERS_STORAGE_KEY)
     console.error("[MSW] Não foi possível ler os usuários salvos.", error)
-    return [DEMO_USER]
+    return [DEMO_USER, SECOND_DEMO_USER]
   }
 }
 
@@ -445,6 +462,10 @@ function getToken(request: Request): string | null {
 function getAuthenticatedUser(
   request: Request
 ): MockUser | null {
+  if (getMockScenario() === "session-expired") {
+    return null
+  }
+
   const token = getToken(request)
 
   if (!token) {
@@ -467,6 +488,9 @@ function getAuthenticatedUser(
 }
 
 export function getMockUserIdFromToken(token: string): string | null {
+  if (getMockScenario() === "session-expired") {
+    return null
+  }
   const session = readStoredSessions().find(
     (item) => item.token === token
   )
@@ -480,12 +504,15 @@ export function getMockUserIdFromToken(token: string): string | null {
     : null
 }
 
+let catalogRequestCount = 0
+
 export const handlers = [
   http.get("https://picsum.photos/*", () => {
     return passthrough()
   }),
 
-  http.get("/api/nfts", ({ request }) => {
+  http.get("/api/nfts", async ({ request }) => {
+    const scenario = getMockScenario()
     const url = new URL(request.url)
     const q = url.searchParams.get("q")?.trim().toLowerCase().slice(0, 100) ?? ""
     const category = url.searchParams.get("category") ?? "all"
@@ -502,6 +529,30 @@ export const handlers = [
       url.searchParams.get("pageSize") ?? "9",
       10
     )
+    const requestIndex = catalogRequestCount
+    catalogRequestCount += 1
+
+    if (scenario === "catalog-error" || scenario === "http-error") {
+      return HttpResponse.json(
+        { message: "O catálogo está temporariamente indisponível." },
+        { status: 503 }
+      )
+    }
+
+    if (scenario === "network-error") {
+      return Response.error()
+    }
+
+    await waitForMockLatency(scenario, requestIndex)
+
+    if (scenario === "out-of-order") {
+      await new Promise((resolve) => {
+        window.setTimeout(
+          resolve,
+          requestedPage === 1 ? 900 : 100
+        )
+      })
+    }
 
     const categories = [
       ...new Set(mockNfts.map((nft) => nft.category)),
@@ -622,6 +673,13 @@ export const handlers = [
       )
     }
 
+    if (getMockScenario() === "favorites-error") {
+      return HttpResponse.json(
+        { message: "Não foi possível salvar o favorito agora." },
+        { status: 503 }
+      )
+    }
+
     const nftId = String(params.id)
 
     if (!mockNfts.some((nft) => nft.id === nftId)) {
@@ -648,6 +706,13 @@ export const handlers = [
       return HttpResponse.json(
         { message: "Faça login para remover favoritos." },
         { status: 401 }
+      )
+    }
+
+    if (getMockScenario() === "favorites-error") {
+      return HttpResponse.json(
+        { message: "Não foi possível remover o favorito agora." },
+        { status: 503 }
       )
     }
 
@@ -1167,6 +1232,20 @@ export const handlers = [
       )
     }
 
+    if (
+      result.kind === "created" &&
+      getMockScenario() === "payment-timeout"
+    ) {
+      return HttpResponse.json(
+        {
+          message:
+            "A resposta do pagamento expirou. Você pode tentar novamente sem duplicar o pedido.",
+          code: "PAYMENT_TIMEOUT",
+        },
+        { status: 504 }
+      )
+    }
+
     return HttpResponse.json(
       {
         ...result.order,
@@ -1203,6 +1282,20 @@ export const handlers = [
   }),
 
   http.post("/api/quotes", async ({ request }) => {
+    const scenario = getMockScenario()
+    await waitForMockLatency(scenario)
+
+    if (scenario === "quote-error" || scenario === "http-error") {
+      return HttpResponse.json(
+        { message: "O serviço de cotação está temporariamente indisponível." },
+        { status: 503 }
+      )
+    }
+
+    if (scenario === "network-error") {
+      return Response.error()
+    }
+
     let body: unknown
 
     try {

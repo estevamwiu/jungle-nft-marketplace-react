@@ -103,7 +103,7 @@ function HomeRoute() {
       }}
       onCatalogChange={(update) =>
         void navigate({
-          replace: true,
+          replace: update.q !== undefined,
           search: (previous) => {
             const next = { ...previous, ...update }
 

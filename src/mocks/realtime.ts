@@ -6,6 +6,7 @@ import {
 } from "./order-store"
 import { getMockUserIdFromToken } from "./handlers"
 import { updateMockNftPrice } from "./nft-store"
+import { getMockScenario, waitForMockLatency } from "./scenarios"
 import type {
   NftUpdatedEvent,
 } from "@/features/realtime/types"
@@ -14,9 +15,11 @@ import type { OrderUpdatedEvent } from "@/features/checkout/types"
 const socketOrigin = window.location.origin.replace(/^http/, "ws")
 const realtime = ws.link(socketOrigin)
 const orderTimers = new Map<string, number>()
+const interruptedOrders = new Set<string>()
 
 function scheduleOrderUpdate(
   orderId: string,
+  pendingEvent: OrderUpdatedEvent,
   emitOrder: (event: OrderUpdatedEvent) => void,
   emitNft: (event: NftUpdatedEvent) => void
 ) {
@@ -24,11 +27,11 @@ function scheduleOrderUpdate(
     return
   }
 
-  const timer = window.setTimeout(() => {
+  const delay = getMockScenario() === "socket-disconnect" ? 3_000 : 1_500
+  const timer = window.setTimeout(async () => {
     orderTimers.delete(orderId)
-    const declined =
-      new URLSearchParams(window.location.search).get("scenario") ===
-      "payment-declined"
+    await waitForMockLatency()
+    const declined = getMockScenario() === "payment-declined"
     const finalization = finalizeMockOrder(
       orderId,
       declined ? "declined" : "confirmed"
@@ -37,8 +40,14 @@ function scheduleOrderUpdate(
     if (finalization) {
       finalization.nftEvents.forEach(emitNft)
       emitOrder(finalization.orderEvent)
+
+      if (getMockScenario() === "out-of-order") {
+        finalization.nftEvents.forEach(emitNft)
+        emitOrder(pendingEvent)
+        emitOrder(finalization.orderEvent)
+      }
     }
-  }, 1500)
+  }, delay)
 
   orderTimers.set(orderId, timer)
 }
@@ -109,8 +118,22 @@ export const realtimeHandler = realtime.addEventListener(
       io.client.emit("order.updated", event)
 
       if (event.data.status === "pending") {
+        if (
+          getMockScenario() === "socket-disconnect" &&
+          !interruptedOrders.has(payload.orderId)
+        ) {
+          interruptedOrders.add(payload.orderId)
+          window.setTimeout(() => {
+            connection.client.close(
+              4000,
+              "simulated socket interruption"
+            )
+          }, 250)
+        }
+
         scheduleOrderUpdate(
           payload.orderId,
+          event,
           (updatedEvent) =>
             io.client.emit("order.updated", updatedEvent),
           (updatedEvent) =>

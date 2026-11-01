@@ -40,6 +40,8 @@ async function bootstrap() {
   const { worker } = await import("./mocks/browser")
 
   await worker.start()
+  const { initializeMockScenario } = await import("./mocks/scenarios")
+  initializeMockScenario()
 
   ReactDOM.createRoot(
     document.getElementById("root")!

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react"
+import { useEffect, useRef, useState, type FormEvent } from "react"
 import {
   createFileRoute,
   Link,
@@ -26,6 +26,7 @@ import {
 import { getQuote } from "@/features/checkout/api/quote-api"
 import type { OrderSnapshot } from "@/features/checkout/types"
 import { saveOrder } from "@/features/activity/order-storage"
+import { getMockScenario } from "@/mocks/scenarios"
 import {
   OrderConfirmationDialog,
   type CompletedOrder,
@@ -120,11 +121,12 @@ function getIdempotencyKey(
 
 function CheckoutPage() {
   const navigate = useNavigate()
+  const processedOrderIds = useRef(new Set<string>())
   const queryClient = useQueryClient()
 
   const { isAuthenticated, isLoading, user } = useAuth()
   const userId = user?.id
-  const { items, totalItems, clearCart } = useCart()
+  const { items, totalItems, removeItem, updateQuantity } = useCart()
   const token = localStorage.getItem("jungle-auth-token")
   const appliedCoupon = localStorage.getItem("kurio-applied-coupon") ?? ""
   const quoteItems = items.map(({ nft, quantity }) => ({
@@ -221,9 +223,16 @@ function CheckoutPage() {
   useEffect(() => {
     const order = orderQuery.data
 
-    if (!order || order.status === "pending" || !userId) {
+    if (
+      !order ||
+      order.status === "pending" ||
+      !userId ||
+      processedOrderIds.current.has(order.orderId)
+    ) {
       return
     }
+
+    processedOrderIds.current.add(order.orderId)
 
     const storageKey = `kurio-order-idempotency-${userId}`
     localStorage.removeItem(pendingOrderKey(userId))
@@ -249,10 +258,35 @@ function CheckoutPage() {
     )
 
     if (order.status === "confirmed") {
-      clearCart()
+      for (const purchasedItem of order.items) {
+        const cartItem = items.find(
+          (item) => item.nft.id === purchasedItem.id
+        )
+
+        if (!cartItem) {
+          continue
+        }
+
+        const remainingQuantity =
+          cartItem.quantity - purchasedItem.quantity
+
+        if (remainingQuantity > 0) {
+          updateQuantity(purchasedItem.id, remainingQuantity)
+        } else {
+          removeItem(purchasedItem.id)
+        }
+      }
+
       localStorage.removeItem("kurio-applied-coupon")
     }
-  }, [clearCart, orderQuery.data, queryClient, userId])
+  }, [
+    items,
+    orderQuery.data,
+    queryClient,
+    removeItem,
+    updateQuantity,
+    userId,
+  ])
 
   useEffect(() => {
     if (!pendingOrderId || !userId || !token) {
@@ -326,11 +360,7 @@ function CheckoutPage() {
     setWalletConnection("connecting")
 
     window.setTimeout(() => {
-      const scenario = new URLSearchParams(window.location.search).get(
-        "scenario"
-      )
-
-      if (scenario === "wallet-rejected") {
+      if (getMockScenario() === "wallet-rejected") {
         setWalletConnection("rejected")
         setError("A conexão da carteira foi recusada. Tente novamente.")
         return
