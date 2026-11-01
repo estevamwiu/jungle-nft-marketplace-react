@@ -5,6 +5,7 @@ import {
   Link,
   Outlet,
   useNavigate,
+  useRouterState,
 } from "@tanstack/react-router"
 import {
   Menu,
@@ -18,6 +19,7 @@ import {
 import { useCart } from "@/features/cart/hooks/use.cart"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { Footer } from "@/components/layout/Footer"
+import { HomePage } from "@/routes/index"
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -28,7 +30,14 @@ function RootLayout() {
   const { user, isAuthenticated, isLoading, logout } = useAuth()
   const navigate = useNavigate()
 
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+
   const [menuOpen, setMenuOpen] = useState(false)
+
+  const isAuthModal =
+    pathname === "/login" || pathname === "/register"
 
   function closeMenu() {
     setMenuOpen(false)
@@ -51,12 +60,8 @@ function RootLayout() {
 
   return (
     <div className="min-h-screen bg-kurio-bg text-kurio-text">
-      {/* =====================================
-          NAVBAR
-      ===================================== */}
       <header className="sticky top-0 z-50 border-b border-[#493026] bg-kurio-bg/95 backdrop-blur-md">
         <nav className="kurio-container flex h-18 items-center justify-between gap-4">
-          {/* Logo */}
           <Link
             to="/"
             onClick={closeMenu}
@@ -65,7 +70,6 @@ function RootLayout() {
             KURIO
           </Link>
 
-          {/* Navegação desktop */}
           <div className="hidden h-full items-center gap-8 md:flex">
             <Link
               to="/"
@@ -100,7 +104,6 @@ function RootLayout() {
             </span>
           </div>
 
-          {/* Ações desktop */}
           <div className="hidden items-center gap-5 md:flex">
             <button
               type="button"
@@ -155,7 +158,6 @@ function RootLayout() {
             )}
           </div>
 
-          {/* Ações mobile */}
           <div className="flex items-center gap-5 md:hidden">
             <Link
               to="/cart"
@@ -184,7 +186,6 @@ function RootLayout() {
           </div>
         </nav>
 
-        {/* Menu mobile */}
         {menuOpen && (
           <div
             id="kurio-mobile-menu"
@@ -251,16 +252,16 @@ function RootLayout() {
         )}
       </header>
 
-      {/* =====================================
-          CONTEÚDO
-      ===================================== */}
       <main className="kurio-container min-h-[70vh]">
+        {isAuthModal && (
+          <div aria-hidden="true" inert>
+            <HomePage />
+          </div>
+        )}
+
         <Outlet />
       </main>
 
-      {/* =====================================
-          FOOTER TEMPORÁRIO
-      ===================================== */}
       <Footer />
     </div>
   )

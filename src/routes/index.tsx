@@ -19,7 +19,7 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 })
 
-function HomePage() {
+export function HomePage() {
   const [search, setSearch] = useState("")
   const [category, setCategory] = useState("all")
   const [sortOrder, setSortOrder] = useState("default")

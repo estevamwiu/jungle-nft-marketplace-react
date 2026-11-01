@@ -2,20 +2,22 @@
 import { useState, type FormEvent } from "react"
 import {
   createFileRoute,
-  Link,
   useNavigate,
 } from "@tanstack/react-router"
+import { Eye, EyeOff } from "lucide-react"
 
 import { useAuth } from "@/features/auth/hooks/use-auth"
-import { Button } from "@/components/ui/button"
+import { AuthModal } from "@/features/auth/components/Auth.Modal"
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
 })
 
+const inputClass =
+  "h-[31px] w-full rounded border border-[#493026] bg-[#21130f] px-3 text-[11px] text-[#f4e8d4] outline-none transition-colors placeholder:text-[#a78c70] focus:border-[#d58d49] disabled:opacity-50"
+
 function LoginPage() {
   const navigate = useNavigate()
-
   const { login, isAuthenticated, isLoading } = useAuth()
 
   const [email, setEmail] = useState("")
@@ -24,9 +26,7 @@ function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
-  async function handleSubmit(
-    event: FormEvent<HTMLFormElement>
-  ) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError("")
 
@@ -52,9 +52,7 @@ function LoginPage() {
 
       await navigate({ to: "/" })
     } catch {
-      setError(
-        "Não foi possível realizar o login. Tente novamente."
-      )
+      setError("Não foi possível realizar o login. Tente novamente.")
     } finally {
       setIsSubmitting(false)
     }
@@ -64,163 +62,128 @@ function LoginPage() {
     return (
       <div
         role="status"
-        className="flex min-h-[75vh] items-center justify-center"
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 text-sm text-[#f4e8d4]"
       >
-        <p className="text-slate-400">
-          Verificando sessão...
-        </p>
+        Verificando sessão...
       </div>
     )
   }
 
   if (isAuthenticated) {
     return (
-      <section className="mx-auto max-w-md py-20 text-center">
-        <h1 className="text-2xl font-bold">
-          Você já está autenticado!
-        </h1>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4">
+        <div className="w-full max-w-sm border border-[#493026] bg-[#281813] p-8 text-center">
+          <h1 className="text-lg font-bold text-[#f4e8d4]">
+            Você já está autenticado!
+          </h1>
 
-        <p className="mt-3 text-slate-400">
-          Sua sessão está ativa no Jungle NFT Marketplace.
-        </p>
+          <p className="mt-3 text-xs text-[#a78c70]">
+            Sua sessão está ativa na Kurio.
+          </p>
 
-        <Button
-          type="button"
-          className="mt-6"
-          onClick={() => void navigate({ to: "/" })}
-        >
-          Voltar ao marketplace
-        </Button>
-      </section>
+          <button
+            type="button"
+            onClick={() => void navigate({ to: "/" })}
+            className="mt-6 rounded bg-[#d58d49] px-6 py-3 text-xs font-bold text-[#160e0b]"
+          >
+            Voltar ao marketplace
+          </button>
+        </div>
+      </div>
     )
   }
 
   return (
-    <section className="flex min-h-[75vh] items-center justify-center py-10">
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-8">
+    <AuthModal mode="login">
+      <p className="mt-7 text-center text-[10px] leading-4 text-[#f4e8d4]">
+        Entre para gerenciar sua carteira, coleção e perfil
+        de criador.
+      </p>
 
-        <h1 className="text-center text-3xl font-bold">
-          Entrar
-        </h1>
+      <form
+        onSubmit={(event) => void handleSubmit(event)}
+        className="mx-auto mt-5 max-w-[248px] space-y-2"
+      >
+        <label htmlFor="login-email" className="sr-only">
+          E-mail
+        </label>
 
-        <p className="mt-2 text-center text-slate-400">
-          Acesse sua conta no Jungle NFT Marketplace
-        </p>
+        <input
+          id="login-email"
+          type="email"
+          value={email}
+          onChange={(event) => {
+            setEmail(event.target.value)
+            setError("")
+          }}
+          placeholder="contato@email.com"
+          autoComplete="email"
+          required
+          disabled={isSubmitting}
+          className={inputClass}
+        />
 
-        <form
-          onSubmit={(event) => void handleSubmit(event)}
-          className="mt-8 space-y-5"
-        >
+        <div className="relative">
+          <label htmlFor="login-password" className="sr-only">
+            Senha
+          </label>
 
-          <div>
-            <label
-              htmlFor="email"
-              className="mb-2 block text-sm font-medium"
-            >
-              E-mail
-            </label>
-
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(event) => {
-                setEmail(event.target.value)
-                setError("")
-              }}
-              placeholder="seu@email.com"
-              autoComplete="email"
-              required
-              disabled={isSubmitting}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-violet-500 disabled:opacity-50"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-2 block text-sm font-medium"
-            >
-              Senha
-            </label>
-
-            <div className="relative">
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(event) => {
-                  setPassword(event.target.value)
-                  setError("")
-                }}
-                placeholder="Digite sua senha"
-                autoComplete="current-password"
-                required
-                disabled={isSubmitting}
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 pr-24 text-white outline-none focus:border-violet-500 disabled:opacity-50"
-              />
-
-              <button
-                type="button"
-                onClick={() =>
-                  setShowPassword((value) => !value)
-                }
-                disabled={isSubmitting}
-                aria-label={
-                  showPassword
-                    ? "Ocultar senha"
-                    : "Mostrar senha"
-                }
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-violet-400 hover:text-violet-300 disabled:opacity-50"
-              >
-                {showPassword ? "Ocultar" : "Mostrar"}
-              </button>
-            </div>
-          </div>
-
-          {error && (
-            <p
-              role="alert"
-              className="rounded-lg border border-red-800 bg-red-950 p-3 text-sm text-red-300"
-            >
-              {error}
-            </p>
-          )}
-
-          <Button
-            type="submit"
-            className="w-full"
+          <input
+            id="login-password"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(event) => {
+              setPassword(event.target.value)
+              setError("")
+            }}
+            placeholder="Senha"
+            autoComplete="current-password"
+            required
             disabled={isSubmitting}
+            className={`${inputClass} pr-10`}
+          />
+
+          <button
+            type="button"
+            onClick={() => setShowPassword((value) => !value)}
+            disabled={isSubmitting}
+            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-[#a78c70] hover:text-[#d58d49]"
           >
-            {isSubmitting ? "Entrando..." : "Entrar"}
-          </Button>
-        </form>
-
-        <div className="mt-6 rounded-lg border border-slate-700 p-4 text-sm">
-          <p className="mb-2 font-semibold">
-            Conta de demonstração
-          </p>
-
-          <p className="text-slate-400">
-            E-mail: demo@jungle.com
-          </p>
-
-          <p className="text-slate-400">
-            Senha: 123456
-          </p>
+            {showPassword ? <Eye size={15} /> : <EyeOff size={15} />}
+          </button>
         </div>
 
-        <p className="mt-6 text-center text-sm text-slate-400">
-          Ainda não possui uma conta?{" "}
-          <Link
-            to="/register"
-            className="font-semibold text-violet-400 hover:text-violet-300"
+        <div className="text-right">
+          <span
+            title="Recuperação de senha indisponível nesta demonstração"
+            className="cursor-not-allowed text-[10px] text-[#d58d49] opacity-70"
           >
-            Cadastre-se
-          </Link>
-        </p>
+            Esqueceu a senha?
+          </span>
+        </div>
 
-      </div>
-    </section>
+        {error && (
+          <p
+            role="alert"
+            className="border border-red-900/60 bg-red-950/20 p-2 text-[11px] text-red-300"
+          >
+            {error}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="mt-2 h-[34px] w-full rounded bg-[#d58d49] text-xs font-bold text-[#160e0b] transition-colors hover:bg-[#e6a15f] disabled:opacity-50"
+        >
+          {isSubmitting ? "Entrando..." : "Entrar"}
+        </button>
+      </form>
+
+      <p className="mt-4 text-center text-[10px] text-[#a78c70]">
+        Conta demo: demo@jungle.com / 123456
+      </p>
+    </AuthModal>
   )
 }
