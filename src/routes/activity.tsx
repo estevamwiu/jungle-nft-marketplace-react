@@ -138,6 +138,7 @@ function ActivityPage() {
 
                 <select
                   name="status"
+                  autoComplete="off"
                   value={filter}
                   onChange={(event) =>
                     setFilter(

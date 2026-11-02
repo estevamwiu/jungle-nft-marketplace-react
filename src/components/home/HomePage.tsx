@@ -415,6 +415,7 @@ export function HomePage({
                     <input
                       type="range"
                       name="minPrice"
+                      autoComplete="off"
                       min={bounds.min}
                       max={bounds.max}
                       step="0.01"
@@ -436,6 +437,7 @@ export function HomePage({
                     <input
                       type="range"
                       name="maxPrice"
+                      autoComplete="off"
                       min={bounds.min}
                       max={bounds.max}
                       step="0.01"
@@ -543,6 +545,7 @@ export function HomePage({
 
                   <select
                     id="marketplace-sort"
+                    autoComplete="off"
                     value={sortOrder}
                     onChange={(event) =>
                       changeSort(event.target.value)

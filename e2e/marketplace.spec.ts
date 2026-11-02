@@ -82,7 +82,22 @@ test("unhandled application routes pass through the mock worker", async ({
   ).toBeVisible()
   await expect(page.locator('input[name="minPrice"]')).toHaveCount(1)
   await expect(page.locator('input[name="maxPrice"]')).toHaveCount(1)
-  await expect(page.locator('input[name="email"]')).toHaveCount(1)
+  await expect(page.locator('input[name="minPrice"]')).toHaveAttribute(
+    "autocomplete",
+    "off"
+  )
+  await expect(page.locator('input[name="maxPrice"]')).toHaveAttribute(
+    "autocomplete",
+    "off"
+  )
+  await expect(page.locator('input[name="email"]')).toHaveAttribute(
+    "autocomplete",
+    "email"
+  )
+  await expect(page.locator("#marketplace-sort")).toHaveAttribute(
+    "autocomplete",
+    "off"
+  )
 })
 
 test("direct NFT links load and missing NFTs show a not-found state", async ({

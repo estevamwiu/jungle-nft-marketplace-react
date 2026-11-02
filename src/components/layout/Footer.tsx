@@ -153,6 +153,7 @@ export function Footer() {
             <input
               type="email"
               name="email"
+              autoComplete="email"
               required
               aria-label="E-mail para newsletter"
               placeholder="digite seu e-mail..."

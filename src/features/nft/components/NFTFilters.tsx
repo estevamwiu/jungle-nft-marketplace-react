@@ -40,6 +40,7 @@ export function NFTFilters({
           <input
             id="nft-search"
             type="search"
+            autoComplete="off"
             placeholder="Nome do NFT..."
             value={search}
             onChange={(event) =>
@@ -61,6 +62,7 @@ export function NFTFilters({
 
         <select
           id="nft-category"
+          autoComplete="off"
           value={category}
           onChange={(event) =>
             onCategoryChange(event.target.value)
@@ -90,6 +92,7 @@ export function NFTFilters({
 
         <select
           id="nft-sort"
+          autoComplete="off"
           value={sortOrder}
           onChange={(event) =>
             onSortChange(event.target.value)

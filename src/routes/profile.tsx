@@ -290,6 +290,7 @@ function ProfilePage() {
                   <input
                     id="profile-display-name"
                     type="text"
+                    autoComplete="name"
                     value={profile.displayName}
                     onChange={(event) =>
                       updateProfile(
@@ -315,6 +316,7 @@ function ProfilePage() {
                   <input
                     id="profile-username"
                     type="text"
+                    autoComplete="username"
                     value={profile.username}
                     onChange={(event) =>
                       updateProfile(
@@ -339,6 +341,7 @@ function ProfilePage() {
                   <input
                     id="profile-email"
                     type="email"
+                    autoComplete="email"
                     value={user.email}
                     readOnly
                     className={`${inputClass} cursor-not-allowed opacity-70`}
@@ -361,6 +364,7 @@ function ProfilePage() {
                     <input
                       id="profile-ens"
                       type="text"
+                      autoComplete="off"
                       value={profile.ensName}
                       onChange={(event) =>
                         updateProfile(
@@ -390,6 +394,7 @@ function ProfilePage() {
                   <input
                     id="profile-wallet"
                     type="text"
+                    autoComplete="off"
                     value={profile.walletNickname}
                     onChange={(event) =>
                       updateProfile(

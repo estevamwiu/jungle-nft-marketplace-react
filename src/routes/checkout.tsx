@@ -670,6 +670,7 @@ function CheckoutPage() {
               <input
                 id="displayName"
                 type="text"
+                autoComplete="name"
                 required
                 value={form.displayName}
                 onChange={(event) =>
@@ -691,6 +692,7 @@ function CheckoutPage() {
               <input
                 id="username"
                 type="text"
+                autoComplete="username"
                 required
                 value={form.username}
                 onChange={(event) =>
@@ -712,6 +714,7 @@ function CheckoutPage() {
               <div className="relative">
                 <select
                   id="network"
+                  autoComplete="off"
                   required
                   value={form.network}
                   onChange={(event) =>
@@ -752,6 +755,7 @@ function CheckoutPage() {
               <input
                 id="profileName"
                 type="text"
+                autoComplete="nickname"
                 required
                 value={form.profileName}
                 onChange={(event) =>
@@ -824,6 +828,7 @@ function CheckoutPage() {
               <div className="relative">
                 <select
                   id="walletType"
+                  autoComplete="off"
                   required
                   value={form.walletType}
                   onChange={(event) =>
@@ -863,6 +868,7 @@ function CheckoutPage() {
               <input
                 id="referralCode"
                 type="text"
+                autoComplete="off"
                 value={form.referralCode}
                 onChange={(event) =>
                   updateForm("referralCode", event.target.value)
@@ -883,6 +889,7 @@ function CheckoutPage() {
               <input
                 id="email"
                 type="email"
+                autoComplete="email"
                 required
                 value={form.email}
                 onChange={(event) =>
@@ -904,6 +911,7 @@ function CheckoutPage() {
               <input
                 id="ensName"
                 type="text"
+                autoComplete="off"
                 value={form.ensName}
                 onChange={(event) =>
                   updateForm("ensName", event.target.value)
@@ -938,6 +946,7 @@ function CheckoutPage() {
             <textarea
               id="notes"
               rows={5}
+              autoComplete="off"
               value={form.notes}
               onChange={(event) =>
                 updateForm("notes", event.target.value)

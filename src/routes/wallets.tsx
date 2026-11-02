@@ -199,7 +199,12 @@ function WalletForm({
           required
           error={errors.displayName}
         >
-          <input type="text" className={inputClass} {...bind("displayName")} />
+          <input
+            type="text"
+            autoComplete="name"
+            className={inputClass}
+            {...bind("displayName")}
+          />
         </Field>
 
         <Field
@@ -208,12 +213,18 @@ function WalletForm({
           required
           error={errors.nickname}
         >
-          <input type="text" className={inputClass} {...bind("nickname")} />
+          <input
+            type="text"
+            autoComplete="nickname"
+            className={inputClass}
+            {...bind("nickname")}
+          />
         </Field>
 
         <Field id={idOf("network")} label="Rede" required error={errors.network}>
           <SelectBox>
             <select
+              autoComplete="off"
               className={`${inputClass} appearance-none pr-9`}
               {...bind("network")}
             >
@@ -231,7 +242,12 @@ function WalletForm({
           required
           error={errors.profileName}
         >
-          <input type="text" className={inputClass} {...bind("profileName")} />
+          <input
+            type="text"
+            autoComplete="nickname"
+            className={inputClass}
+            {...bind("profileName")}
+          />
         </Field>
 
         <Field
@@ -273,6 +289,7 @@ function WalletForm({
         >
           <SelectBox>
             <select
+              autoComplete="off"
               className={`${inputClass} appearance-none pr-9`}
               {...bind("walletType")}
             >
@@ -290,7 +307,12 @@ function WalletForm({
           required
           error={errors.referralCode}
         >
-          <input type="text" className={inputClass} {...bind("referralCode")} />
+          <input
+            type="text"
+            autoComplete="off"
+            className={inputClass}
+            {...bind("referralCode")}
+          />
         </Field>
 
         <Field id={idOf("email")} label="E-mail" required error={errors.email}>
@@ -312,6 +334,7 @@ function WalletForm({
             <SelectBox>
               <select
                 aria-label="Domínio ENS"
+                autoComplete="off"
                 className={`${inputClass} w-[78px] appearance-none pr-6`}
                 defaultValue=".eth"
               >
@@ -319,7 +342,12 @@ function WalletForm({
               </select>
             </SelectBox>
 
-            <input type="text" className={inputClass} {...bind("ensName")} />
+            <input
+              type="text"
+              autoComplete="off"
+              className={inputClass}
+              {...bind("ensName")}
+            />
           </div>
         </Field>
       </div>
