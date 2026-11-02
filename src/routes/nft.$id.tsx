@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { isAxiosError } from "axios"
@@ -41,6 +40,7 @@ function NFTDetailsPage() {
   const imageCloseButtonRef = useRef<HTMLButtonElement>(null)
   const token = localStorage.getItem("jungle-auth-token")
   const favoritesKey = ["favorites", user?.id]
+
   const favoritesQuery = useQuery({
     queryKey: favoritesKey,
     queryFn: ({ signal }) =>
@@ -49,6 +49,7 @@ function NFTDetailsPage() {
         : Promise.reject(new Error("Sessão não encontrada.")),
     enabled: Boolean(isAuthenticated && user && token),
   })
+
   const favoriteMutation = useMutation({
     mutationFn: ({
       nftId,
@@ -67,8 +68,10 @@ function NFTDetailsPage() {
     },
     onMutate: async ({ nftId, shouldAdd }) => {
       await queryClient.cancelQueries({ queryKey: favoritesKey })
+
       const previous =
         queryClient.getQueryData<string[]>(favoritesKey)
+
       queryClient.setQueryData<string[]>(favoritesKey, (current = []) =>
         shouldAdd
           ? [...new Set([...current, nftId])]
@@ -90,6 +93,7 @@ function NFTDetailsPage() {
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: favoritesKey }),
   })
+
   const isFavorite = favoritesQuery.data?.includes(id) ?? false
 
   useEffect(() => {
@@ -151,6 +155,7 @@ function NFTDetailsPage() {
                   />
                 ))}
               </div>
+
               <div className="skeleton-shimmer relative overflow-hidden rounded-md border border-[#493026] bg-kurio-surface p-3">
                 <div className="skeleton-shimmer aspect-square rounded-xl bg-[#35221a]" />
               </div>
@@ -159,31 +164,39 @@ function NFTDetailsPage() {
             <div>
               <div className="skeleton-shimmer mb-2 h-4 w-20 bg-kurio-surface" />
               <div className="skeleton-shimmer h-10 w-3/4 bg-kurio-surface" />
+
               <div className="mt-5 flex items-center justify-between border-b border-[#493026] pb-5">
                 <div className="skeleton-shimmer h-8 w-28 bg-kurio-surface" />
                 <div className="skeleton-shimmer h-4 w-44 bg-kurio-surface" />
               </div>
+
               <div className="mt-5">
                 <div className="skeleton-shimmer mb-3 h-5 w-36 bg-kurio-surface" />
+
                 <div className="space-y-2">
                   <div className="skeleton-shimmer h-4 bg-kurio-surface" />
                   <div className="skeleton-shimmer h-4 bg-kurio-surface" />
                   <div className="skeleton-shimmer h-4 w-4/5 bg-kurio-surface" />
                 </div>
               </div>
+
               <div className="mt-6">
                 <div className="skeleton-shimmer mb-3 h-5 w-20 bg-kurio-surface" />
+
                 <div className="flex gap-2">
                   <div className="skeleton-shimmer h-7 w-28 rounded-full bg-kurio-surface" />
                   <div className="skeleton-shimmer h-7 w-20 rounded-full bg-kurio-surface" />
                   <div className="skeleton-shimmer h-7 w-24 rounded-full bg-kurio-surface" />
                 </div>
               </div>
+
               <div className="mt-8 flex h-10 gap-4">
                 <div className="skeleton-shimmer w-24 bg-kurio-surface" />
                 <div className="skeleton-shimmer flex-1 bg-kurio-surface" />
               </div>
+
               <div className="skeleton-shimmer mt-4 h-10 border-b border-[#493026] bg-kurio-surface" />
+
               <div className="mt-5 space-y-3">
                 {Array.from({ length: 4 }, (_, index) => (
                   <div
@@ -199,6 +212,7 @@ function NFTDetailsPage() {
             <div className="mb-7 h-8 border-b border-[#493026]">
               <div className="skeleton-shimmer h-5 w-40 bg-kurio-surface" />
             </div>
+
             <div className="skeleton-shimmer h-48 bg-kurio-surface" />
           </div>
 
@@ -206,12 +220,14 @@ function NFTDetailsPage() {
             <div className="mb-7 h-8 border-b border-[#493026]">
               <div className="skeleton-shimmer h-5 w-44 bg-kurio-surface" />
             </div>
+
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {Array.from({ length: 5 }, (_, index) => (
                 <div key={index}>
                   <div className="skeleton-shimmer border border-[#493026] bg-kurio-surface p-3">
                     <div className="skeleton-shimmer aspect-square rounded-md bg-[#35221a]" />
                   </div>
+
                   <div className="skeleton-shimmer mt-3 h-4 w-3/4 bg-kurio-surface" />
                   <div className="skeleton-shimmer mt-1 h-4 w-1/3 bg-kurio-surface" />
                 </div>
@@ -268,6 +284,7 @@ function NFTDetailsPage() {
     .sort((a, b) => {
       const aMatches = a.category === nft.category ? 1 : 0
       const bMatches = b.category === nft.category ? 1 : 0
+
       return bMatches - aMatches
     })
     .slice(0, 5)
@@ -276,6 +293,7 @@ function NFTDetailsPage() {
     quantity,
     Math.max(nft.availableQuantity, 1)
   )
+
   const totalPrice = multiplyEth(nft.price, safeQuantity)
 
   function handleAddToCart() {
@@ -290,21 +308,24 @@ function NFTDetailsPage() {
     setAddedToCart(true)
   }
 
-    function handleBuy() {
-      if (!nft || !nft.available || nft.availableQuantity < 1) {
-        return
-      }
+  function handleBuy() {
+    if (!nft || !nft.available || nft.availableQuantity < 1) {
+      return
+    }
 
-  handleAddToCart()
-  void navigate({ to: "/cart" })
-}
+    handleAddToCart()
+    void navigate({ to: "/cart" })
+  }
 
   function handleToggleFavorite() {
     if (!isAuthenticated || !user) {
       void navigate({
         to: "/login",
-        search: { returnTo: `/nft/${encodeURIComponent(id)}` },
+        search: {
+          returnTo: `/nft/${encodeURIComponent(id)}`,
+        },
       })
+
       return
     }
 
@@ -449,7 +470,9 @@ function NFTDetailsPage() {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+                onClick={() =>
+                  setQuantity((value) => Math.max(1, value - 1))
+                }
                 disabled={!nft.available || quantity === 1}
                 aria-label="Diminuir quantidade"
                 className="flex h-10 w-10 items-center justify-center rounded bg-kurio-primary text-kurio-bg transition-opacity disabled:opacity-40"
@@ -494,7 +517,8 @@ function NFTDetailsPage() {
                 type="button"
                 onClick={handleToggleFavorite}
                 disabled={
-                  favoritesQuery.isPending || favoriteMutation.isPending
+                  favoritesQuery.isPending ||
+                  favoriteMutation.isPending
                 }
                 aria-pressed={isFavorite}
                 className={`inline-flex items-center justify-center gap-2 rounded border px-4 py-3 text-xs font-bold transition-colors ${
@@ -507,6 +531,7 @@ function NFTDetailsPage() {
                   size={16}
                   fill={isFavorite ? "currentColor" : "none"}
                 />
+
                 {isFavorite ? "Favoritado" : "Favoritar"}
               </button>
             </div>
@@ -532,8 +557,15 @@ function NFTDetailsPage() {
               disabled={!nft.available}
               className="inline-flex items-center gap-2 text-xs font-bold text-kurio-primary transition-opacity hover:opacity-80 disabled:opacity-40"
             >
-              {addedToCart ? <Check size={15} /> : <Plus size={15} />}
-              {addedToCart ? "Adicionado ao carrinho" : "Adicionar ao carrinho"}
+              {addedToCart ? (
+                <Check size={15} />
+              ) : (
+                <Plus size={15} />
+              )}
+
+              {addedToCart
+                ? "Adicionado ao carrinho"
+                : "Adicionar ao carrinho"}
             </button>
           </div>
 
@@ -615,24 +647,38 @@ function NFTDetailsPage() {
             </p>
 
             <div>
-              <h3 className="font-bold text-kurio-text">
-                Criador:
+              <h3 className="mb-1 font-bold text-kurio-text">
+                Rede:
               </h3>
-              <p>{nft.creator}</p>
+
+              <p>
+                NFT registrado na rede {nft.network}, com informações
+                de propriedade e autenticidade representadas nesta
+                experiência demonstrativa.
+              </p>
             </div>
 
             <div>
-              <h3 className="font-bold text-kurio-text">
-                Categoria:
+              <h3 className="mb-1 font-bold text-kurio-text">
+                Contrato:
               </h3>
-              <p>{nft.category}</p>
+
+              <p>
+                Informações de contrato inteligente não disponíveis
+                nesta versão demonstrativa.
+              </p>
             </div>
 
             <div>
-              <h3 className="font-bold text-kurio-text">
-                Identificação:
+              <h3 className="mb-1 font-bold text-kurio-text">
+                Direitos autorais:
               </h3>
-              <p>Token #{nft.id.padStart(4, "0")}</p>
+
+              <p>
+                Obra digital criada por {nft.creator}.
+                As condições de direitos autorais e eventuais
+                royalties dependem do contrato de cada coleção.
+              </p>
             </div>
           </div>
         ) : (

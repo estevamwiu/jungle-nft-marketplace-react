@@ -7,7 +7,7 @@ const nftFixtures: Omit<NFT, "availableQuantity">[] = [
     id: "1",
     name: "Emerald Ape #042",
     description:
-      "Um colecionável exclusivo da coleção Emerald Ape. Com seu estilo marcante, óculos verdes e jaqueta sofisticada, representa a combinação entre arte digital e identidade no universo Web3.",
+    "Um colecionável digital finalizado à mão da coleção Kurio Editions, verificado na Ethereum, com arte desbloqueável e acesso para colecionadores.",
     image: "/images/emerald-ape.webp",
     price: "1.19",
     creator: "Kurio Studio",
