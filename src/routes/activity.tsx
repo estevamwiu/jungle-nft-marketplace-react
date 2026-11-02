@@ -137,6 +137,7 @@ function ActivityPage() {
                 Status
 
                 <select
+                  name="status"
                   value={filter}
                   onChange={(event) =>
                     setFilter(

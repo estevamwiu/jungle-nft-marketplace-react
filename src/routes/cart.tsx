@@ -315,6 +315,7 @@ function CartPage() {
                 >
                   <input
                     type="text"
+                    name="promoCode"
                     value={promoCode}
                     onChange={(event) => {
                       setPromoCode(event.target.value)

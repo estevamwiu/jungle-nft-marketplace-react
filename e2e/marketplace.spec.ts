@@ -80,6 +80,9 @@ test("unhandled application routes pass through the mock worker", async ({
   await expect(
     page.getByRole("heading", { name: "Seja dono da cultura digital" })
   ).toBeVisible()
+  await expect(page.locator('input[name="minPrice"]')).toHaveCount(1)
+  await expect(page.locator('input[name="maxPrice"]')).toHaveCount(1)
+  await expect(page.locator('input[name="email"]')).toHaveCount(1)
 })
 
 test("direct NFT links load and missing NFTs show a not-found state", async ({

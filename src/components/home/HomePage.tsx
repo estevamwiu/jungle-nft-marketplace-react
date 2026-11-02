@@ -414,6 +414,7 @@ export function HomePage({
                     <span className="sr-only">Preço mínimo em ETH</span>
                     <input
                       type="range"
+                      name="minPrice"
                       min={bounds.min}
                       max={bounds.max}
                       step="0.01"
@@ -434,6 +435,7 @@ export function HomePage({
                     <span className="sr-only">Preço máximo em ETH</span>
                     <input
                       type="range"
+                      name="maxPrice"
                       min={bounds.min}
                       max={bounds.max}
                       step="0.01"
