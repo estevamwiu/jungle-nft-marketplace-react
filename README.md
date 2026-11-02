@@ -1,173 +1,183 @@
 # Jungle NFT Marketplace
 
-Marketplace frontend built with React, TypeScript, TanStack Router and
-TanStack Query. The API, session, wallet, checkout and real-time updates are
-simulated locally with MSW; no production backend or blockchain wallet is
-required.
+Marketplace frontend desenvolvido com React, TypeScript, TanStack Router e
+TanStack Query. A API, as sessões, as carteiras, o checkout e as atualizações em
+tempo real são simulados localmente pelo MSW; não é necessário um backend de
+produção nem uma carteira blockchain.
 
-## Requirements
+## Requisitos
 
-- Node.js 20.19+ or 22.12+
+- Node.js 20.19+ ou 22.12+
 - npm
-- Node.js 22.19+ or 24+ to run the Lighthouse audit
+- Node.js 22.19+ ou 24+ para executar a auditoria do Lighthouse
 
-## Run locally
+## Executar localmente
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Open the URL printed by Vite. MSW starts before React renders the application,
-so the mocked API is also available in development and production builds.
-There are no environment variables or external services required.
+Abra o endereço exibido pelo Vite. O MSW é iniciado antes da renderização do
+React, então a API simulada também está disponível nas versões de
+desenvolvimento e produção. Não são necessárias variáveis de ambiente nem
+serviços externos.
 
-## Deploy to Vercel
+## Publicar na Vercel
 
-This repository is configured as a Vite single-page application. The Vercel
-rewrite in `vercel.json` sends client-side routes back to `index.html`, so
-direct links such as `/profile` and `/nft/1` work after deployment.
+Este repositório está configurado como uma aplicação de página única (SPA) com
+Vite. A regra de reescrita em `vercel.json` direciona as rotas do cliente de
+volta para `index.html`, permitindo abrir links diretamente, como `/profile`
+e `/nft/1`, após a publicação.
 
-1. Push the project to a GitHub repository.
-2. In Vercel, choose **Add New → Project** and import that repository.
-3. Keep the detected Vite settings, or set:
-   - Framework preset: **Vite**
-   - Install command: `npm ci`
-   - Build command: `npm run build`
-   - Output directory: `dist`
-4. No environment variables are required. Select **Deploy**.
+1. Envie o projeto para um repositório no GitHub.
+2. Na Vercel, selecione **Add New → Project** e importe o repositório.
+3. Mantenha as configurações Vite detectadas ou informe:
+   - Predefinição do framework: **Vite**
+   - Comando de instalação: `npm ci`
+   - Comando de build: `npm run build`
+   - Diretório de saída: `dist`
+4. Não é necessário configurar variáveis de ambiente. Selecione **Deploy**.
 
-The deployed site uses the same MSW mock API described below. Accounts, catalog,
-wallets, checkout and real-time events are demonstrations; there is no
-production backend, real wallet connection, payment processing or NFT transfer.
+O site publicado usa a mesma API simulada pelo MSW descrita abaixo. Contas,
+catálogo, carteiras, checkout e eventos em tempo real são demonstrações: não
+há backend de produção, conexão real com carteiras, processamento de pagamentos
+ou transferência de NFTs.
 
-## Demo accounts
+## Contas de demonstração
 
-| E-mail | Password |
+| E-mail | Senha |
 | --- | --- |
 | `demo@jungle.com` | `123456` |
 | `collector@jungle.com` | `123456` |
 
-These are fictitious local accounts. Passwords are represented by PBKDF2
-hashes in the mock; the demo password is never persisted as plain text.
+Essas contas locais são fictícias. As senhas são representadas por hashes PBKDF2
+no mock; a senha de demonstração nunca é armazenada em texto puro.
 
-## Mock scenarios
+## Cenários de simulação
 
-Append `?scenario=<name>` to the application URL. The chosen scenario is
-persisted in local storage and remains active while navigating the app.
+Adicione `?scenario=<name>` ao endereço da aplicação. O cenário escolhido é
+salvo no armazenamento local e continua ativo durante a navegação.
 
-| Scenario | Effect |
+| Cenário | Efeito |
 | --- | --- |
-| `default` | Normal mock responses and confirmed payments |
-| `latency` | Adds 1.2 seconds to catalog requests |
-| `variable-latency` | Adds reproducible delays from 250 to 1,300 ms to catalog requests |
-| `out-of-order` | Delays older catalog pages and emits duplicate and stale order events |
-| `network-error` | Simulates a connection failure for catalog and quote requests |
-| `http-error` | Returns HTTP 503 for catalog and quote requests |
-| `catalog-error` | Returns HTTP 503 for catalog requests |
-| `quote-error` | Returns HTTP 503 for quote requests |
-| `favorites-error` | Returns HTTP 503 for favorite mutations |
-| `session-expired` | Rejects authenticated mock requests |
-| `payment-timeout` | Persists the order, then returns HTTP 504 so retry can recover it idempotently |
-| `payment-declined` | Finalizes the pending order as declined over the Socket.IO mock |
-| `socket-disconnect` | Closes the mock WebSocket while an order is pending; reconnect/reload reconciles through REST |
-| `wallet-rejected` | Rejects the simulated wallet connection |
+| `default` | Respostas simuladas normais e pagamentos confirmados |
+| `latency` | Adiciona 1,2 segundo às requisições do catálogo |
+| `variable-latency` | Adiciona atrasos reproduzíveis de 250 a 1.300 ms às requisições do catálogo |
+| `out-of-order` | Atrasa páginas antigas do catálogo e emite eventos de pedido duplicados e desatualizados |
+| `network-error` | Simula falha de conexão nas requisições do catálogo e das cotações |
+| `http-error` | Retorna HTTP 503 para requisições do catálogo e das cotações |
+| `catalog-error` | Retorna HTTP 503 para requisições do catálogo |
+| `quote-error` | Retorna HTTP 503 para requisições de cotação |
+| `favorites-error` | Retorna HTTP 503 para alterações nos favoritos |
+| `session-expired` | Rejeita requisições autenticadas simuladas |
+| `payment-timeout` | Persiste o pedido e depois retorna HTTP 504, permitindo recuperá-lo com uma nova tentativa idempotente |
+| `payment-declined` | Finaliza o pedido pendente como recusado pelo Socket.IO simulado |
+| `socket-disconnect` | Fecha o WebSocket simulado enquanto há um pedido pendente; a reconexão ou recarga reconcilia o estado pela API REST |
+| `wallet-rejected` | Rejeita a conexão simulada com a carteira |
 
-Reset all mock data, account/session state, cart, favorites, profiles, wallets,
-coupons and orders with:
+Redefina os dados simulados, o estado da conta e da sessão, o carrinho, os
+favoritos, os perfis, as carteiras, os cupons e os pedidos acessando:
 
 ```text
 http://localhost:5173/?scenario=reset
 ```
 
-The page resets storage, switches to `default`, and removes the reset query
-parameter.
+A página redefine o armazenamento, muda para `default` e remove o parâmetro de
+redefinição do endereço.
 
-## Commands
+## Comandos
 
 ```bash
-npm run dev             # Development server with MSW
-npm run typecheck       # TypeScript project checks
-npm run lint            # ESLint
-npm run build           # Type-check and production build
-npm run preview         # Preview the production build
-npm run test:e2e        # Playwright in desktop and mobile Chromium
-npm run test:e2e:report # Open the most recent HTML test report
-npm run audit:lighthouse # Build and generate three-run mobile/desktop Lighthouse reports
+npm run dev              # Servidor de desenvolvimento com MSW
+npm run typecheck        # Verificações de tipos do TypeScript
+npm run lint             # ESLint
+npm run build            # Verifica os tipos e gera o build de produção
+npm run preview          # Pré-visualiza o build de produção
+npm run test:e2e         # Playwright em Chromium para desktop e dispositivos móveis
+npm run test:e2e:report  # Abre o relatório HTML mais recente dos testes
+npm run audit:lighthouse # Gera relatórios Lighthouse em três execuções para dispositivos móveis e desktop
 ```
 
-Install the Playwright browser once before running E2E tests:
+Instale o navegador do Playwright uma vez antes de executar os testes E2E:
 
 ```bash
 npx playwright install chromium
 ```
 
-Playwright starts Vite automatically, uses isolated browser contexts, and
-retains traces, screenshots and video for failures under `test-results/`.
-The HTML report is written to `playwright-report/`.
+O Playwright inicia o Vite automaticamente, usa contextos de navegador
+isolados e salva rastreamentos, capturas de tela e vídeos de falhas em
+`test-results/`. O relatório HTML é salvo em `playwright-report/`.
 
-The Lighthouse command builds the production app, serves it locally, and
-audits the home and NFT detail pages three times in mobile and desktop modes.
-It writes individual HTML and JSON reports plus a median summary with tool
-versions, environment, throttling settings, LCP, CLS and TBT to
-`lighthouse-reports/`; these generated reports are ignored by Git.
+O comando do Lighthouse gera o build de produção, serve a aplicação localmente
+e audita as páginas inicial e de detalhes do NFT três vezes nos modos móvel e
+desktop. Ele salva relatórios individuais em HTML e JSON, além de um resumo
+das medianas com versões das ferramentas, ambiente, configurações de limitação,
+LCP, CLS e TBT em `lighthouse-reports/`. Esses relatórios gerados são
+ignorados pelo Git.
 
-### Lighthouse baseline
+### Referência do Lighthouse
 
-Three runs per page and profile on Node 24.12.0, Lighthouse 13.6.0 and Chrome
-156.0.8078.4 (Windows x64), using the production build and default MSW mocks.
-Lighthouse mobile simulation uses a 412 × 823 viewport, 4× CPU slowdown,
-150 ms RTT and approximately 1.6 Mbps throughput. Desktop uses a 1350 × 940
-viewport and Lighthouse's desktop throttling settings.
+Três execuções por página e perfil no Node 24.12.0, Lighthouse 13.6.0 e Chrome
+156.0.8078.4 (Windows x64), usando o build de produção e os mocks padrão do
+MSW. A simulação móvel do Lighthouse usa viewport de 412 × 823, redução de CPU
+de 4×, RTT de 150 ms e velocidade de aproximadamente 1,6 Mbps. O modo desktop
+usa viewport de 1350 × 940 e as configurações de limitação de rede do Lighthouse
+para desktop.
 
-| Profile | Page | Performance | Accessibility | Best Practices | SEO | LCP median | CLS median | TBT median |
+| Perfil | Página | Desempenho | Acessibilidade | Boas práticas | SEO | LCP mediano | CLS mediano | TBT mediano |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Mobile | Home | 59 | 100 | 100 | 100 | 4.57 s | 0.150 | 739 ms |
-| Mobile | NFT details | 66 | 100 | 100 | 100 | 4.70 s | 0.000 | 706 ms |
-| Desktop | Home | 98 | 100 | 100 | 100 | 1.02 s | 0.054 | 22 ms |
-| Desktop | NFT details | 98 | 100 | 100 | 100 | 1.05 s | 0.000 | 8 ms |
+| Móvel | Inicial | 59 | 100 | 100 | 100 | 4,57 s | 0,150 | 739 ms |
+| Móvel | Detalhes do NFT | 66 | 100 | 100 | 100 | 4,70 s | 0,000 | 706 ms |
+| Desktop | Inicial | 98 | 100 | 100 | 100 | 1,02 s | 0,054 | 22 ms |
+| Desktop | Detalhes do NFT | 98 | 100 | 100 | 100 | 1,05 s | 0,000 | 8 ms |
 
-The mobile Performance target (90) is not met. The mobile reports show about
-1.6 s of JavaScript boot-up time, including approximately 783 ms attributed to
-the MSW browser client and 643 ms to the main application chunk under the
-4× CPU simulation. The production chunks are 466.82 kB (170.74 kB gzip) for
-the MSW client and 300.10 kB (92.12 kB gzip) for the application. This startup
-cost delays rendering of the largest content and contributes to the 706–739 ms
-TBT; the home-page LCP breakdown also reports about 1.14 s of element render
-delay. These measurements retain the required mock behavior and are not
-adjusted to hide the cost. The home report additionally records one layout
-shift attributed to the marketplace section (CLS 0.150); the detail page has
-no measured layout shift.
+A meta de desempenho móvel (90) ainda não foi atingida. Os relatórios móveis
+indicam cerca de 1,6 s de inicialização do JavaScript, incluindo
+aproximadamente 783 ms atribuídos ao cliente do navegador do MSW e 643 ms ao
+pacote principal da aplicação, na simulação com redução de CPU de 4×. Os
+pacotes de produção têm 466,82 kB (170,74 kB compactados com gzip) para o
+cliente MSW e 300,10 kB (92,12 kB compactados com gzip) para a aplicação. Esse
+custo de inicialização atrasa a renderização do maior conteúdo e contribui
+para o TBT de 706–739 ms; a análise de LCP da página inicial também aponta cerca
+de 1,14 s de atraso na renderização do elemento. As medições mantêm o
+comportamento simulado exigido e não foram alteradas para ocultar esse custo.
+O relatório da página inicial também registra uma mudança de layout atribuída
+à seção do marketplace (CLS 0,150); a página de detalhes não apresenta mudança
+de layout medida.
 
-## Visual regression
+## Regressão visual
 
-The visual E2E tests compare the marketplace home, catalog, NFT details, cart
-and payment at 1440px desktop and 390px mobile. Those five pages also have
-tablet baselines at 768px. To intentionally refresh the reviewed baselines
-after a UI change, run:
+Os testes visuais E2E comparam a página inicial do marketplace, o catálogo, os
+detalhes do NFT, o carrinho e o pagamento em desktop a 1440 px e em dispositivos
+móveis a 390 px. Essas cinco páginas também têm referências visuais para tablet
+a 768 px. Para atualizar intencionalmente as referências após uma alteração na
+interface, execute:
 
 ```bash
 npm run test:e2e -- e2e/visual.spec.ts --update-snapshots
 ```
 
-Review the generated image changes before including updated snapshots.
+Revise as imagens geradas antes de incluí-las nas alterações.
 
-## Current E2E coverage
+## Cobertura atual dos testes E2E
 
-The catalog follows the supplied design with nine Portuguese collection
-filters, Ethereum/Polygon/Solana network filters, and four pages of mock NFTs;
-the search field is intentionally omitted. The Playwright suite currently
-checks catalog filters, sorting, pagination and history, direct NFT routes and
-not-found handling, loading skeletons under
-latency and catalog
-recovery, account isolation and expired sessions, favorite failure recovery,
-registration and invalid-login feedback, password changes, wallet validation
-and persistence, cart quantity/coupon persistence and invalid/expired coupon
-feedback, and successful, declined and timed-out checkout flows. It also
-covers wallet-connection retry, pending-order recovery after a socket
-interruption and reload, live Socket.IO price updates, stale/duplicate event
-handling, profile persistence, cart additions made while an order is pending,
-keyboard focus behavior for the image dialog, and visual baselines for the
-marketplace home, catalog, NFT detail, cart and payment pages. Core E2E flows
-run at 1440px desktop and 390px mobile; visual regression also covers the
-768px tablet viewport.
+O catálogo segue o design fornecido, com nove filtros de coleções em português,
+filtros de rede Ethereum/Polygon/Solana e quatro páginas de NFTs simulados; o
+campo de busca foi intencionalmente omitido. Atualmente, a suíte do Playwright
+verifica filtros, ordenação, paginação e histórico do catálogo, rotas diretas
+de NFTs e tratamento de itens não encontrados, skeletons de carregamento em
+situações de latência e recuperação de falhas do catálogo, isolamento de contas
+e sessões expiradas, recuperação de falhas nos favoritos, cadastro e mensagens
+de erro de login, alteração de senha, validação e persistência de carteiras,
+persistência da quantidade de itens e de cupons no carrinho, mensagens para
+cupons inválidos ou expirados e fluxos de checkout bem-sucedidos, recusados ou
+com timeout. Também verifica novas tentativas de conexão à carteira,
+recuperação de pedidos pendentes após interrupção do socket e recarga,
+atualizações de preço em tempo real pelo Socket.IO, tratamento de eventos
+duplicados ou desatualizados, persistência do perfil, inclusão de itens no
+carrinho enquanto um pagamento está pendente, foco do teclado no diálogo da
+imagem e referências visuais da página inicial, catálogo, detalhes do NFT,
+carrinho e pagamento. Os fluxos E2E principais são executados em desktop a
+1440 px e em dispositivos móveis a 390 px; a regressão visual também cobre
+viewport de tablet a 768 px.

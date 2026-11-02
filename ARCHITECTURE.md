@@ -1,63 +1,73 @@
-# Architecture
+# Arquitetura
 
-## Runtime and data flow
+## Execução e fluxo de dados
 
-- `src/main.tsx` starts the MSW service worker and initializes the selected
-  scenario before mounting React.
-- TanStack Router owns route state. Catalog search and filters are URL-backed;
-  discrete filter, sort and page changes create browser-history entries while
-  text search replaces the current entry.
-- Axios API modules call the mock REST endpoints. TanStack Query owns request
-  lifecycle, caching, mutation state and invalidation.
-- `src/mocks/handlers.ts` implements REST contracts and validates requests.
-  Mock accounts, sessions, favorites, profiles, wallets and orders are stored
-  in local storage where refresh persistence is required.
-- `src/mocks/order-store.ts` is the order and idempotency source of truth.
-  Quotes validate current prices, stock, coupon and expiration before an order
-  is created.
-- `src/mocks/realtime.ts` intercepts the Socket.IO-compatible WebSocket
-  transport with `@mswjs/socket.io-binding`. The browser still uses
-  `socket.io-client`; events are not dispatched directly into UI state.
+- `src/main.tsx` inicia o service worker do MSW e configura o cenário
+  selecionado antes de montar o React.
+- O TanStack Router controla o estado das rotas. A busca e os filtros do
+  catálogo são representados na URL; mudanças pontuais de filtro, ordenação e
+  página criam entradas no histórico do navegador, enquanto a busca por texto
+  substitui a entrada atual.
+- Os módulos de API usam Axios para chamar os endpoints REST simulados. O
+  TanStack Query controla o ciclo de vida das requisições, o cache, o estado das
+  alterações e a invalidação.
+- `src/mocks/handlers.ts` implementa os contratos REST e valida as
+  requisições. Contas, sessões, favoritos, perfis, carteiras e pedidos
+  simulados são armazenados no armazenamento local quando precisam persistir
+  após uma recarga.
+- `src/mocks/order-store.ts` é a fonte de verdade dos pedidos e das chaves de
+  idempotência. Antes da criação de um pedido, as cotações validam os preços
+  atuais, o estoque, o cupom e a validade.
+- `src/mocks/realtime.ts` intercepta o transporte WebSocket compatível com
+  Socket.IO por meio de `@mswjs/socket.io-binding`. O navegador continua
+  usando `socket.io-client`; os eventos não são enviados diretamente para o
+  estado da interface.
 
-## Session and account isolation
+## Sessão e isolamento de contas
 
-Each user has a distinct mock user ID. Authentication tokens resolve to one
-user, and protected handlers validate that mapping. Favorites, profiles,
-wallets and order history are keyed by user ID. `session-expired` makes
-protected requests return 401 so the normal authentication recovery path is
-exercised.
+Cada usuário tem um ID simulado próprio. Os tokens de autenticação identificam
+um usuário, e os handlers protegidos validam essa associação. Favoritos,
+perfis, carteiras e histórico de pedidos são separados por ID de usuário. O
+cenário `session-expired` faz as requisições protegidas retornarem HTTP 401,
+permitindo exercitar o fluxo normal de recuperação da autenticação.
 
-Passwords are PBKDF2 hashes with per-user salts. Demo credentials and fixture
-data are intentionally fictitious and must not be used as real credentials.
+As senhas são armazenadas como hashes PBKDF2 com salts individuais por
+usuário. As credenciais de demonstração e os dados de exemplo são
+intencionalmente fictícios e não devem ser usados como credenciais reais.
 
-## Cart and checkout
+## Carrinho e checkout
 
-The cart is persisted locally and is independent of the order store. Checkout
-requests a quote from the mock API, then creates an order with an
-`Idempotency-Key`. Retrying an identical attempt returns the existing order;
-reusing its key with different content is a conflict.
+O carrinho é persistido localmente e não depende do armazenamento de pedidos.
+O checkout solicita uma cotação à API simulada e, em seguida, cria um pedido
+com o cabeçalho `Idempotency-Key`. Repetir uma tentativa idêntica retorna o
+pedido existente; reutilizar a mesma chave com conteúdo diferente gera um
+conflito.
 
-An order begins as `pending`. Socket.IO emits `order.updated`; the client also
-polls REST while pending and recovers the order after refresh. A confirmed
-order reduces only the purchased quantities from the current cart, preserving
-additional quantities added while payment was pending. A declined order leaves
-the cart intact. Terminal order statuses are not reverted by duplicate or
-older events.
+Um pedido começa com o status `pending`. O Socket.IO emite o evento
+`order.updated`; enquanto o pedido está pendente, o cliente também consulta a
+API REST e recupera o estado após uma recarga. Quando o pedido é confirmado,
+somente as quantidades compradas são removidas do carrinho atual, preservando
+quantidades adicionais incluídas enquanto o pagamento estava pendente. Um
+pedido recusado mantém os itens no carrinho. Eventos duplicados ou antigos não
+revertem o status final do pedido.
 
-## Cache and realtime reconciliation
+## Cache e sincronização em tempo real
 
-Catalog, detail, quote, favorite and order data use TanStack Query. Socket
-events carry a stable resource identity and monotonically increasing version.
-The client rejects duplicate or older versions, updates active cached
-resources, and invalidates catalog and quote queries when an NFT changes.
-After socket reconnection, active cart items and the pending order are
-subscribed again; the REST order query reconciles the final state.
+Os dados do catálogo, detalhes, cotações, favoritos e pedidos usam TanStack
+Query. Os eventos do socket incluem uma identidade estável do recurso e uma
+versão monotonicamente crescente. O cliente rejeita versões duplicadas ou mais
+antigas, atualiza os recursos ativos no cache e invalida as consultas do
+catálogo e da cotação quando um NFT muda. Após uma reconexão do socket, o
+cliente se inscreve novamente nos itens ativos do carrinho e no pedido
+pendente; a consulta REST do pedido sincroniza o estado final.
 
-## Mock transport limitations
+## Limitações do transporte simulado
 
-MSW's browser service worker intercepts REST requests and the
-`@mswjs/socket.io-binding` adapter translates Socket.IO client events over a
-mocked WebSocket connection. This validates client protocol and UI behavior,
-but it is not a production Socket.IO server: there is no cross-browser server,
-network infrastructure, blockchain, wallet extension or payment gateway.
-Order state and fixture mutations are local to the browser context.
+O service worker do navegador do MSW intercepta as requisições REST, e o
+adaptador `@mswjs/socket.io-binding` traduz os eventos do cliente Socket.IO
+por meio de uma conexão WebSocket simulada. Isso permite validar o protocolo
+do cliente e o comportamento da interface, mas não equivale a um servidor
+Socket.IO de produção: não há servidor compartilhado entre navegadores,
+infraestrutura de rede, blockchain, extensão de carteira ou gateway de
+pagamento. O estado dos pedidos e as alterações dos dados de exemplo ficam
+limitados ao contexto do navegador.
