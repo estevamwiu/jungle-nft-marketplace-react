@@ -180,7 +180,7 @@ export function HomePage({
 
   return (
     <div className="w-full">
-      <section className="relative grid min-h-[220px] items-center gap-10 overflow-hidden rounded-xl border border-[#493026] bg-kurio-surface px-5 py-5 sm:min-h-[250px] lg:min-h-0 lg:grid-cols-2 lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0 lg:py-12">
+      <section className="relative mt-5 grid min-h-[220px] items-center gap-10 overflow-hidden rounded-xl border border-[#493026] bg-kurio-surface px-5 py-5 sm:min-h-[250px] lg:min-h-0 lg:grid-cols-2 lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0 lg:py-12">
         <div className="relative z-10 w-[68%] max-w-xl lg:w-full">
           <p className="text-[10px] text-kurio-text lg:text-xs">
             Bem-vindo à Kurio
