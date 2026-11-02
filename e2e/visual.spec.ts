@@ -53,6 +53,48 @@ test("marketplace home visual baseline", async ({ page }) => {
     })
   ).toBeVisible()
   await expect(
+    page.getByText(
+      "Descubra NFTs selecionados de criadores emergentes e consagrados. Colecione arte digital rara, apoie artistas e tenha uma parte da cultura da internet."
+    )
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", {
+      name: "Lançamentos gênesis de edição limitada",
+    })
+  ).toBeVisible()
+  await expect(
+    page.getByText(
+      "Colecione edições exclusivas diretamente dos criadores antes da revelação pública."
+    )
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", {
+      name: "Arte digital selecionada e muito mais",
+    })
+  ).toBeVisible()
+  await expect(
+    page.getByText(
+      "Explore novos artistas, coleções verificadas e obras digitais que definem a cultura."
+    )
+  ).toBeVisible()
+  await expect(
+    page.getByText("12 de setembro | Leitura de 6 min")
+  ).toBeVisible()
+  await expect(
+    page.getByText("13 de setembro | Leitura de 2 min")
+  ).toBeVisible()
+  await expect(
+    page.getByText("15 de setembro | Leitura de 3 min")
+  ).toBeVisible()
+  await expect(
+    page.getByText("15 de setembro | Leitura de 2 min")
+  ).toBeVisible()
+  await expect(
+    page.getByText(
+      "Proteja sua carteira, seus ativos e sua identidade."
+    )
+  ).toBeVisible()
+  await expect(
     page.getByRole("button", { name: "Destaque anterior" })
   ).toHaveCount(0)
   await page.getByRole("button", {

@@ -22,6 +22,25 @@ Open the URL printed by Vite. MSW starts before React renders the application,
 so the mocked API is also available in development and production builds.
 There are no environment variables or external services required.
 
+## Deploy to Vercel
+
+This repository is configured as a Vite single-page application. The Vercel
+rewrite in `vercel.json` sends client-side routes back to `index.html`, so
+direct links such as `/profile` and `/nft/1` work after deployment.
+
+1. Push the project to a GitHub repository.
+2. In Vercel, choose **Add New → Project** and import that repository.
+3. Keep the detected Vite settings, or set:
+   - Framework preset: **Vite**
+   - Install command: `npm ci`
+   - Build command: `npm run build`
+   - Output directory: `dist`
+4. No environment variables are required. Select **Deploy**.
+
+The deployed site uses the same MSW mock API described below. Accounts, catalog,
+wallets, checkout and real-time events are demonstrations; there is no
+production backend, real wallet connection, payment processing or NFT transfer.
+
 ## Demo accounts
 
 | E-mail | Password |

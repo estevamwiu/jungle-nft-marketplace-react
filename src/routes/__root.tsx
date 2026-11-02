@@ -119,14 +119,14 @@ function RootLayout() {
 
             <span
               title="Página em desenvolvimento"
-              className="flex h-full cursor-not-allowed items-center text-sm text-kurio-muted"
+              className="flex h-full cursor-not-allowed items-center text-sm text-kurio-text"
             >
               Criadores
             </span>
 
             <span
               title="Página em desenvolvimento"
-              className="flex h-full cursor-not-allowed items-center text-sm text-kurio-muted"
+              className="flex h-full cursor-not-allowed items-center text-sm text-kurio-text"
             >
               Aprenda
             </span>
@@ -244,11 +244,11 @@ function RootLayout() {
                 Mercado
               </Link>
 
-              <span className="pl-3 text-sm text-kurio-muted">
+              <span className="pl-3 text-sm text-kurio-text">
                 Criadores (em breve)
               </span>
 
-              <span className="pl-3 text-sm text-kurio-muted">
+              <span className="pl-3 text-sm text-kurio-text">
                 Aprenda (em breve)
               </span>
 

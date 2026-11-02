@@ -186,13 +186,14 @@ export function HomePage({
             Bem-vindo à Kurio
           </p>
 
-          <h1 className="mt-4 text-[1.4rem] font-bold uppercase leading-[1.2] text-kurio-text sm:text-3xl lg:mt-5 lg:text-[2.75rem] lg:leading-[1.5]">
+          <h1 className="mt-4 text-[1.4rem] font-bold uppercase leading-[1.2] text-kurio-text sm:text-3xl lg:mt-5 lg:text-[43px] lg:leading-[70px]">
             Seja dono da cultura digital
           </h1>
 
           <p className="mt-3 max-w-md text-[10px] leading-4 text-kurio-muted sm:text-xs lg:mt-5 lg:text-sm lg:leading-6">
-            Descubra coleções digitais exclusivas e encontre a próxima
-            peça da sua coleção.
+            Descubra NFTs selecionados de criadores emergentes e
+            consagrados. Colecione arte digital rara, apoie artistas e
+            tenha uma parte da cultura da internet.
           </p>
 
           <button

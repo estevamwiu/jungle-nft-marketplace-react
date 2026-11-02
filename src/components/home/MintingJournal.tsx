@@ -7,29 +7,29 @@ const articles = [
     title: "Como funciona a propriedade de NFTs",
     description:
       "Aprenda a colecionar, negociar e verificar ativos digitais.",
-    category: "Guia",
-    readingTime: "6 min de leitura",
+    date: "12 de setembro",
+    readingTime: "6 min",
   },
   {
     title: "10 artistas digitais para acompanhar",
     description:
       "Conheça criadores que moldam a cultura digital.",
-    category: "Criadores",
-    readingTime: "2 min de leitura",
+    date: "13 de setembro",
+    readingTime: "2 min",
   },
   {
     title: "Raridade, atributos e procedência",
     description:
       "Entenda raridade, procedência, direitos autorais e utilidade.",
-    category: "Coleções",
-    readingTime: "3 min de leitura",
+    date: "15 de setembro",
+    readingTime: "3 min",
   },
   {
     title: "Como proteger sua carteira",
     description:
-      "Proteja seus ativos, suas chaves e sua identidade.",
-    category: "Segurança",
-    readingTime: "2 min de leitura",
+      "Proteja sua carteira, seus ativos e sua identidade.",
+    date: "15 de setembro",
+    readingTime: "2 min",
   },
 ]
 
@@ -79,13 +79,9 @@ export function MintingJournal() {
 
               <div className="p-5">
                 <div className="flex flex-wrap items-center gap-2 text-[10px] text-kurio-muted">
-                  <span className="font-bold text-kurio-primary">
-                    {article.category}
+                  <span>
+                    {article.date} | Leitura de {article.readingTime}
                   </span>
-
-                  <span>·</span>
-
-                  <span>{article.readingTime}</span>
                 </div>
 
                 <h3 className="mt-4 min-h-12 text-sm font-bold leading-6 text-kurio-text">
