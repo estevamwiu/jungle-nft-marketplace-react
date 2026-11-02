@@ -60,6 +60,9 @@ export const realtimeHandler = realtime.addEventListener(
     const io = toSocketIo(connection)
     const simulatedNfts = new Set<string>()
     const timers = new Set<number>()
+    const heartbeat = window.setInterval(() => {
+      connection.client.send("2")
+    }, 20_000)
 
     io.client.on("nft.subscribe", (_event, payload: unknown) => {
       if (
@@ -145,6 +148,7 @@ export const realtimeHandler = realtime.addEventListener(
     connection.client.addEventListener(
       "close",
       () => {
+        window.clearInterval(heartbeat)
         timers.forEach((timer) => window.clearTimeout(timer))
         timers.clear()
       },

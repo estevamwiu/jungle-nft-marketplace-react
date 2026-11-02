@@ -1,6 +1,37 @@
 import { expect, test } from "@playwright/test"
 import { loginAs } from "./helpers"
 
+test("mock Socket.IO stays connected beyond its heartbeat interval", async ({
+  page,
+}) => {
+  test.setTimeout(45_000)
+
+  const disconnects: string[] = []
+  let connected = false
+
+  page.on("console", (message) => {
+    if (message.text().includes("[CLIENT] Socket.IO conectado:")) {
+      connected = true
+    }
+
+    if (message.text().includes("[CLIENT] Socket.IO desconectado:")) {
+      disconnects.push(message.text())
+    }
+  })
+
+  await page.goto("/")
+  await expect(
+    page.getByRole("heading", { name: "Seja dono da cultura digital" })
+  ).toBeVisible()
+
+  await expect
+    .poll(() => connected, { timeout: 10_000 })
+    .toBe(true)
+  await page.waitForTimeout(32_000)
+
+  expect(disconnects).toEqual([])
+})
+
 test("Socket.IO price updates refresh the NFT detail and cart quote", async ({
   page,
 }) => {
