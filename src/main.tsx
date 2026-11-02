@@ -39,7 +39,13 @@ declare module "@tanstack/react-router" {
 async function bootstrap() {
   const { worker } = await import("./mocks/browser")
 
-  await worker.start()
+  await worker.start({
+    onUnhandledRequest(request, print) {
+      if (new URL(request.url).pathname.startsWith("/api/")) {
+        print.warning()
+      }
+    },
+  })
   const { initializeMockScenario } = await import("./mocks/scenarios")
   initializeMockScenario()
 

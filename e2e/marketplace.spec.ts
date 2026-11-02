@@ -52,6 +52,36 @@ test("catalog categories, networks, pagination, and browser history", async ({
   await expect(page.getByLabel("Ordenar por:")).toHaveValue("price-desc")
 })
 
+test("unhandled application routes pass through the mock worker", async ({
+  page,
+}) => {
+  const unhandledWarnings: string[] = []
+
+  page.on("console", (message) => {
+    if (message.text().includes("without a matching request handler")) {
+      unhandledWarnings.push(message.text())
+    }
+  })
+
+  await page.goto("/?q=&category=all&sort=default&page=1")
+
+  const response = await page.evaluate(async () => {
+    const result = await fetch("/?q=&category=all&sort=default&page=1")
+
+    return {
+      ok: result.ok,
+      contentType: result.headers.get("content-type"),
+    }
+  })
+
+  expect(response.ok).toBe(true)
+  expect(response.contentType).toContain("text/html")
+  expect(unhandledWarnings).toEqual([])
+  await expect(
+    page.getByRole("heading", { name: "Seja dono da cultura digital" })
+  ).toBeVisible()
+})
+
 test("direct NFT links load and missing NFTs show a not-found state", async ({
   page,
 }) => {
